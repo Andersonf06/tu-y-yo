@@ -33,9 +33,9 @@ service cloud.firestore {
 
       // Datos del hogar: solo miembros, solo colecciones conocidas, documentos pequeños.
       match /{col}/{docId} {
-        allow read: if col in ['gastos', 'deudas', 'metas', 'aportes', 'ingresos'] && isMember(hid);
-        allow delete: if col in ['gastos', 'deudas', 'metas', 'aportes', 'ingresos'] && isMember(hid);
-        allow create, update: if col in ['gastos', 'deudas', 'metas', 'aportes', 'ingresos']
+        allow read: if col in ['gastos', 'deudas', 'metas', 'aportes', 'ingresos', 'fijos', 'cuentas', 'citas'] && isMember(hid);
+        allow delete: if col in ['gastos', 'deudas', 'metas', 'aportes', 'ingresos', 'fijos', 'cuentas', 'citas'] && isMember(hid);
+        allow create, update: if col in ['gastos', 'deudas', 'metas', 'aportes', 'ingresos', 'fijos', 'cuentas', 'citas']
           && isMember(hid)
           && request.resource.data.keys().size() <= 20
           && (!('monto' in request.resource.data) || (request.resource.data.monto is number && request.resource.data.monto >= 0 && request.resource.data.monto < 10000000000));

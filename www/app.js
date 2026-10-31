@@ -43,7 +43,7 @@
   ];
   const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
   const NECESIDADES = ['mercado', 'hogar', 'transporte', 'salud', 'educacion', 'mascotas'];
-  const COLS = ['gastos', 'deudas', 'metas', 'aportes', 'ingresos'];
+  const COLS = ['gastos', 'deudas', 'metas', 'aportes', 'ingresos', 'fijos', 'cuentas', 'citas'];
 
   const ICON = {
     heart: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.3-9.2C1.4 8.4 3.6 5 7 5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.4 0 5.6 3.4 4.3 6.8C19.5 16.4 12 21 12 21z"/></svg>',
@@ -61,6 +61,12 @@
     target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>',
     trend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>',
     snow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="14" r="6"/><circle cx="12" cy="6" r="3"/></svg>',
+    chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h7M8.5 14h4"/></svg>',
+    repeat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg>',
+    bank: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 21h18"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>',
+    cup: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13v5a6 6 0 0 1-6 6h-1a6 6 0 0 1-6-6z"/><path d="M17 9h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 2.5c0 1.5 1 1.5 1 3M12 2.5c0 1.5 1 1.5 1 3"/></svg>',
+    search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>',
     receipt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>'
   };
 
@@ -71,7 +77,7 @@
     mes: mesDe(hoy()), tab: 'inicio', filtro: 'todos', ultimos: {}
   };
   const cfgBase = () => ({
-    nombres: { a: '', b: '' }, ingresos: { a: 0, b: 0 }, reparto: 'proporcional', pctA: 50,
+    nombres: { a: '', b: '' }, ingresos: { a: 0, b: 0 }, mesada: { a: 0, b: 0 }, reparto: 'proporcional', pctA: 50,
     metaAhorroPct: 20, presupuestos: {}
   });
   const yo = () => {
@@ -307,7 +313,7 @@
   }
   function pagosPendientes(maxDias) {
     return S.deudas.map(d => ({ d, st: estadoDeuda(d) }))
-      .filter(({ st }) => st.saldo > 0 && !st.alDia && st.dias != null && st.dias <= maxDias)
+      .filter(({ st }) => st.saldo > 0 && st.dias != null && st.dias <= maxDias)
       .sort((a, b) => a.st.dias - b.st.dias);
   }
   function estadoMeta(m) {
@@ -429,7 +435,22 @@
       </div>
     </section>
 
-    ${(() => { const pp = pagosPendientes(7); return pp.length && S.mes === mesDe(hoy()) ? `<section class="card"><h3>Pagos que se acercan <span class="sub">próximos 7 días</span></h3><div class="stagger" style="display:grid;gap:10px">${pp.map((x, i) => filaPago(x.d, x.st, i)).join('')}</div></section>` : ''; })()}
+    ${(() => {
+      if (S.mes !== mesDe(hoy())) return '';
+      const pp = pagosPendientes(7);
+      const sig = sumarMes(S.mes, 1);
+      const ff = S.fijos.filter(f => f.activo !== false && f.dia).flatMap(f => {
+        const st = estadoFijo(f, S.mes);
+        if (!st.pago && st.dias != null && st.dias <= 7) return [{ f, mes: S.mes, dias: st.dias }];
+        const d2 = diasEntre(hoy(), diaEn(sig, f.dia));
+        return st.pago && d2 <= 7 && !estadoFijo(f, sig).pago ? [{ f, mes: sig, dias: d2 }] : [];
+      }).sort((a, b) => a.dias - b.dias);
+      return pp.length + ff.length ? `<section class="card"><h3>Pagos que se acercan <span class="sub">próximos 7 días</span></h3><div class="stagger" style="display:grid;gap:10px">${[...pp.map(x => ({ dias: x.st.dias, html: i => filaPago(x.d, x.st, i) })), ...ff.map(x => ({ dias: x.dias, html: i => filaFijo(x.f, i, x.mes) }))].sort((p, q) => p.dias - q.dias).map((x, i) => x.html(i)).join('')}</div></section>` : '';
+    })()}
+    ${(() => {
+      const rv = S.gastos.filter(x => x.revisar && !oculto(x)).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '')).slice(0, 5);
+      return rv.length ? `<section class="card"><h3>${ICON.chat.replace('<svg', '<svg style="width:18px;height:18px;color:var(--malva)"')} Para hablar juntos</h3><div style="display:grid;gap:10px">${rv.map(x => `<div class="pago-row"><span class="ico" style="background:var(--${x.pagadoPor === 'b' ? 'malva' : 'lila'})">${esc(ini(x.pagadoPor))}</span><div class="t"><b>${esc(descDe(x))} · ${pesos(x.monto)}</b><small>${x.nota ? '«' + esc(x.nota) + '»' : esc(nombreDia(x.fecha))}</small></div><button class="btn ghost" data-act="hablado" data-id="${esc(x.id)}">Ya lo hablamos</button></div>`).join('')}</div></section>` : '';
+    })()}
 
     <section class="card">
       <h3>¿A dónde va cada peso? <span class="sub">${c.ingresos ? Math.round(ahorroPct * 100) + '% ahorrado' : ''}</span></h3>
@@ -459,6 +480,20 @@
       ${net !== 0 ? `<button class="btn soft full" style="margin-top:12px" data-act="saldar">Registrar que ${esc(nom(deudor))} ya pagó</button>` : ''}
     </section>
 
+    ${(() => {
+      const pp = plataPersonal(S.mes); if (!pp.a.tope && !pp.b.tope) return '';
+      const barra = p => { const x = pp[p], r = x.tope ? x.usado / x.tope : 0; return `<div class="bar-row"><div class="lbl"><b><span class="dot ${p}"></span>${esc(nom(p))}</b><span class="num muted">${x.tope ? (x.usado <= x.tope ? 'le quedan ' + pesos(x.tope - x.usado) : 'se pasó ' + pesos(x.usado - x.tope)) : pesos(x.usado) + ' sin tope'}</span></div><div class="track"><div style="width:${Math.min(100, r * 100)}%;background:${r > 1 ? 'var(--bad)' : 'var(--' + (p === 'a' ? 'lila' : 'malva') + ')'}"></div></div></div>`; };
+      return `<section class="card"><h3>Plata personal <span class="sub">sin dar explicaciones</span></h3><div class="bars">${barra('a')}${barra('b')}</div></section>`;
+    })()}
+
+    ${(() => {
+      if (!S.cuentas.length && !S.deudas.length) return '';
+      const p = patrimonio();
+      return `<section class="card"><h3>Patrimonio de los dos</h3>
+        <div class="patri"><div><small>Tienen</small><b class="num" style="color:var(--ok)">${corto(p.activos)}</b></div><div><small>Deben</small><b class="num" style="color:var(--bad)">${corto(p.deudas)}</b></div><div><small>Neto</small><b class="num">${corto(p.neto)}</b></div></div>
+        <button class="btn ghost full" style="margin-top:12px" data-act="cuentas">${S.cuentas.length ? 'Ver y actualizar cuentas' : 'Agregar sus cuentas y ahorros'}</button></section>`;
+    })()}
+
     <section class="card">
       <h3>Termómetro de diversión</h3>
       ${c.presDiv ? `<div class="bar-row"><div class="lbl"><b>${divRest >= 0 ? 'Les quedan ' + pesos(divRest) : 'Se pasaron por ' + pesos(-divRest)}</b><span class="num muted">${pesos(c.divGastado)} / ${pesos(c.presDiv)}</span></div>
@@ -477,32 +512,52 @@
 
   function vacio(t, d) { return `<div class="empty">${ICON.receipt}<b>${esc(t)}</b>${esc(d)}</div>`; }
 
+  const oculto = x => x.privado && S.modo === 'nube' && x.tipo !== yo();
+  const descDe = x => oculto(x) ? 'Gasto personal de ' + nom(x.tipo) : (x.desc || (CAT[x.categoria]?.n ?? 'Gasto'));
   function itemGasto(x, i) {
     const k = CAT[x.categoria] || (x.categoria === 'ajuste' ? { n: 'Saldar cuentas', c: '#8C8399' } : CAT.otros);
     const de = x.tipo === 'compartido' ? 'Compartido' : 'De ' + nom(x.tipo);
     return `<button class="item" style="--i:${i}" data-act="editarGasto" data-id="${esc(x.id)}">
       <span class="ico" style="background:${k.c}" aria-hidden="true">${esc(k.n[0])}</span>
-      <span class="t"><b>${esc(x.desc || k.n)}</b><small><span class="dot ${esc(x.pagadoPor)}"></span>Pagó ${esc(nom(x.pagadoPor))} · ${esc(de)}</small></span>
+      <span class="t"><b>${x.revisar ? `<span class="flag" title="Para hablar juntos">${ICON.chat}</span>` : ''}${x.privado ? `<span class="flag" title="Privado">${ICON.lock}</span>` : ''}${x.fijoId ? `<span class="flag" title="Gasto fijo">${ICON.repeat}</span>` : ''}${esc(descDe(x))}</b><small><span class="dot ${esc(x.pagadoPor)}"></span>Pagó ${esc(nom(x.pagadoPor))} · ${esc(de)}</small>${x.nota && !oculto(x) ? `<small class="nota">«${esc(x.nota)}»</small>` : ''}</span>
       <span class="m">${pesos(x.monto)}<small class="muted">${esc(k.n)}</small></span></button>`;
   }
+  function listaGastos() {
+    const f = S.filtro, q = normalizarTxt(S.buscar || '');
+    let lista = q ? S.gastos.slice() : S.gastos.filter(x => mesDe(x.fecha) === S.mes);
+    if (f === 'compartido') lista = lista.filter(x => x.tipo === 'compartido');
+    else if (f === 'a' || f === 'b') lista = lista.filter(x => x.tipo === f);
+    if (q) lista = lista.filter(x => normalizarTxt([descDe(x), oculto(x) ? '' : x.nota, CAT[x.categoria]?.n, nom(x.pagadoPor), String(x.monto)].join(' ')).includes(q));
+    lista.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '') || (b.creado || 0) - (a.creado || 0));
+    const porDia = {}; lista.slice(0, 300).forEach(x => (porDia[x.fecha] = porDia[x.fecha] || []).push(x));
+    let i = 0;
+    const html = Object.entries(porDia).map(([d, xs]) => `<div class="day">${esc(nombreDia(d))}${q ? ' ' + esc(d.slice(0, 4)) : ''} · ${pesos(sum(xs))}</div>` + xs.map(x => itemGasto(x, i++)).join('')).join('');
+    return html || (q ? vacio('Nada coincide', 'Prueben con otra palabra, un valor o el nombre de una categoría.') : vacio('Sin gastos aquí', 'Escanea una factura o toca + para anotar uno.'));
+  }
+  const normalizarTxt = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   function vistaGastos() {
     const c = calcular(S.mes);
     const f = S.filtro;
-    let lista = S.gastos.filter(x => mesDe(x.fecha) === S.mes);
-    if (f === 'compartido') lista = lista.filter(x => x.tipo === 'compartido');
-    else if (f === 'a' || f === 'b') lista = lista.filter(x => x.tipo === f);
-    lista.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '') || (b.creado || 0) - (a.creado || 0));
-    const porDia = {}; lista.forEach(x => (porDia[x.fecha] = porDia[x.fecha] || []).push(x));
-    let i = 0;
-    const html = Object.entries(porDia).map(([d, xs]) => `<div class="day">${esc(nombreDia(d))} · ${pesos(sum(xs))}</div>` + xs.map(x => itemGasto(x, i++)).join('')).join('');
+    const html = listaGastos();
+    const fijos = S.fijos.filter(x => x.activo !== false).sort((a, b) => (!!estadoFijo(a, S.mes).pago - !!estadoFijo(b, S.mes).pago) || (a.dia || 99) - (b.dia || 99));
+    const totFijos = sum(fijos), pendFijos = fijos.filter(x => !estadoFijo(x, S.mes).pago);
+    const subs = fijos.filter(x => x.suscripcion);
     const extras = c.extras.sort((a, b) => b.fecha.localeCompare(a.fecha));
     const chip = (v, t) => `<button class="chip" data-act="filtro" data-f="${v}" aria-pressed="${f === v}">${esc(t)}</button>`;
     return `
       <div class="card" style="padding:14px 18px"><div class="row" style="align-items:center">
         <div><div class="eyebrow">Gastado en el mes</div><div style="font:800 28px var(--f-display)" class="num" data-num="${Math.round(c.gastado)}" data-k="gmes">${pesos(c.gastado)}</div></div>
         <button class="btn" data-act="escanear" style="flex:none">${ICON.cam} Escanear</button></div></div>
+      <section class="card">
+        <h3>${ICON.repeat.replace('<svg', '<svg style="width:18px;height:18px;color:var(--lila)"')} Gastos fijos del mes <span class="sub">${fijos.length ? (pendFijos.length ? pendFijos.length + ' pendiente' + (pendFijos.length === 1 ? '' : 's') : 'todos pagados') : ''}</span></h3>
+        ${fijos.length ? `<div class="muted" style="font-size:13px;margin:-6px 0 12px">Suman ${pesos(totFijos)} al mes${subs.length ? ` · ${subs.length} suscripcion${subs.length === 1 ? '' : 'es'}: ${pesos(sum(subs))} al mes, ${pesos(sum(subs) * 12)} al año` : ''}</div>
+          <div class="stagger" style="display:grid;gap:10px">${fijos.map((x, i) => filaFijo(x, i)).join('')}</div>`
+          : '<p class="muted" style="margin:0 0 4px">Arriendo, servicios, internet, Netflix… anótenlos una vez y cada mes los marcan como pagados con un toque.</p>'}
+        <button class="btn soft full" style="margin-top:12px" data-act="nuevoFijo">Agregar gasto fijo o suscripción</button>
+      </section>
+      <label class="buscar" for="buscar">${ICON.search}<input id="buscar" class="input" type="search" placeholder="Buscar en todos los gastos" value="${esc(S.buscar || '')}" autocomplete="off"></label>
       <div class="chips" role="group" aria-label="Filtrar">${chip('todos', 'Todos')}${chip('compartido', 'Compartidos')}${chip('a', 'De ' + nom('a'))}${chip('b', 'De ' + nom('b'))}</div>
-      <div class="list stagger">${html || vacio('Sin gastos aquí', 'Escanea una factura o toca + para anotar uno.')}</div>
+      <div class="list stagger" id="listaG">${html}</div>
       ${extras.length ? `<section class="card"><h3>Ingresos extra del mes</h3><div class="list">${extras.map(x => `<button class="item" data-act="editarIngreso" data-id="${esc(x.id)}"><span class="ico" style="background:var(--ok)">${ICON.up}</span><span class="t"><b>${esc(x.desc || 'Ingreso extra')}</b><small>${esc(nom(x.quien))} · ${esc(nombreDia(x.fecha))}</small></span><span class="m" style="color:var(--ok)">+${pesos(x.monto)}</span></button>`).join('')}</div></section>` : ''}`;
   }
 
@@ -611,11 +666,23 @@
     }
     if (peor) ideas.push({ i: ICON.trend, t: `${CAT[peor.k]?.n || peor.k} subió ${peor.pct}%`, d: `Van ${pesos(peor.dif)} más que el mes pasado. Si vuelven al nivel anterior, en un año ahorran ${pesos(peor.dif * 12)}.` });
     if ((c.porCat.comida || 0) > 50000) { const sem = c.porCat.comida / 4.3; ideas.push({ i: ICON.spark, t: 'Reto: una semana sin domicilios', d: `Gastan cerca de ${pesos(sem)} por semana comiendo fuera. Una semana cocinando en casa puede liberar ${pesos(sem * .7)} para su plan favorito.` }); }
+    const subsP = S.fijos.filter(x => x.suscripcion && x.activo !== false);
+    if (subsP.length) ideas.push({ i: ICON.repeat, t: `Sus ${subsP.length} suscripcion${subsP.length === 1 ? '' : 'es'} cuestan ${pesos(sum(subsP) * 12)} al año`, d: `Revisen cuáles usaron este mes. Cancelar la que menos usan (${esc(subsP.slice().sort((a, b) => b.monto - a.monto)[0].nombre)} es la más cara) libera plata para su meta.` });
     if (c.libreReal > 0) ideas.push({ i: ICON.target, t: 'Si guardan lo que sobra', d: `Pasar los ${pesos(c.libreReal)} libres de este mes a una meta, cada mes, suma ${pesos(c.libreReal * 12)} en un año.` });
     else if (c.ingresos) ideas.push({ i: ICON.target, t: 'Este mes van justos', d: 'Prioricen planes gratis y revisen la categoría que más creció. La meta de ahorro va primero.' });
 
     const metas = S.metas.map(m => ({ m, st: estadoMeta(m) }));
+    const citaMes = S.citas.find(x => (x.mes || x.id) === S.mes && x.hecho);
+    const racha = rachaCitas();
     return `
+      <section class="card cita-card">
+        <div class="idea"><span class="ico" style="background:var(--malva-soft);color:var(--malva)">${ICON.cup}</span><div>
+          <b>Cita de dinero de ${esc(nombreMes(S.mes, { month: 'long' }))}</b>
+          <p>${citaMes ? 'Ya la hicieron. ' + (citaMes.acuerdos ? 'Acuerdos: «' + esc(citaMes.acuerdos.slice(0, 120)) + (citaMes.acuerdos.length > 120 ? '…' : '') + '»' : '') : 'Un resumen del mes y cuatro preguntas para revisar juntos en 15 minutos.'}</p>
+          ${racha ? `<span class="pill lila" style="margin-top:6px">Racha: ${racha} mes${racha === 1 ? '' : 'es'} seguidos</span>` : ''}</div></div>
+        <button class="btn ${citaMes ? 'ghost' : ''} full" style="margin-top:12px" data-act="cita">${citaMes ? 'Ver resumen y acuerdos' : 'Empezar nuestra cita'}</button>
+      </section>
+
       <section class="card">
         <h3>${ICON.heart.replace('<svg', '<svg style="width:18px;height:18px;color:var(--malva)"')} ¿Nos lo podemos permitir?</h3>
         <form data-form="permitir" class="row" style="display:flex;gap:10px">
@@ -659,6 +726,157 @@
     const semanal = Math.max(20000, Math.round((c.ingresos * .05 / 4.3) / 1000) * 1000);
     const semanas = Math.ceil(falta / semanal);
     return `<div class="verdict bad">Mejor esperar un poco.<small>Hoy les faltan ${pesos(falta)} sin tocar el ahorro. Si apartan ${pesos(semanal)} por semana, lo tienen en ${semanas} semana${semanas === 1 ? '' : 's'}. ¿Y si lo vuelven meta?</small></div>`;
+  }
+
+  /* ---------- Gastos fijos y suscripciones ---------- */
+  function estadoFijo(f, mes) {
+    const pago = S.gastos.find(x => x.fijoId === f.id && mesDe(x.fecha) === mes);
+    const actual = mes === mesDe(hoy());
+    const fecha = f.dia ? diaEn(mes, f.dia) : null;
+    const futuro = mes > mesDe(hoy());
+    return { pago, fecha, actual, dias: (actual || futuro) && fecha ? diasEntre(hoy(), fecha) : null, pasado: mes < mesDe(hoy()) };
+  }
+  function chipFijo(st) {
+    if (st.pago) return `<span class="pill ok">Pagado ${fechaCorta(st.pago.fecha)}</span>`;
+    if (st.pasado) return '<span class="pill bad">No se registró</span>';
+    if (st.dias == null) return st.fecha ? `<span class="pill lila">El ${fechaCorta(st.fecha)}</span>` : '<span class="pill lila">Pendiente</span>';
+    if (st.dias < 0) return `<span class="pill bad">Vencido hace ${-st.dias} día${st.dias === -1 ? '' : 's'}</span>`;
+    if (st.dias === 0) return '<span class="pill bad">Vence hoy</span>';
+    if (st.dias <= 5) return `<span class="pill warn">En ${st.dias} día${st.dias === 1 ? '' : 's'}</span>`;
+    return `<span class="pill lila">El ${fechaCorta(st.fecha)}</span>`;
+  }
+  function filaFijo(f, i, mes = S.mes) {
+    const st = estadoFijo(f, mes), k = CAT[f.categoria] || CAT.otros;
+    return `<div class="pago-row" style="--i:${i}"><span class="ico" style="background:${k.c}" aria-hidden="true">${esc(k.n[0])}</span>
+      <div class="t"><b>${esc(f.nombre)}</b><small>${pesos(f.monto)}${f.suscripcion ? ' · suscripción' : ''} · paga ${esc(nom(f.pagadoPor))}</small><div>${chipFijo(st)}</div></div>
+      ${st.pago ? `<button class="btn ghost" data-act="editarFijo" data-id="${esc(f.id)}" aria-label="Editar ${esc(f.nombre)}">Editar</button>` : `<button class="btn soft" data-act="pagarFijo" data-id="${esc(f.id)}" data-mes="${esc(mes)}">Pagado</button>`}</div>`;
+  }
+  function formFijo(f = {}) {
+    return `<h2>${f.id ? 'Editar gasto fijo' : 'Nuevo gasto fijo'}</h2>
+      <p class="muted" style="margin-top:-6px">Se repite cada mes. Cuando lo paguen, lo marcan como pagado y queda en los gastos.</p>
+      <form data-form="fijo" data-id="${esc(f.id || '')}">
+        <div class="field"><label for="fnombre">Nombre</label><input id="fnombre" name="fnombre" class="input" maxlength="40" required value="${esc(f.nombre || '')}" placeholder="Ej: Arriendo, Netflix, Gimnasio"></div>
+        <div class="row"><div class="field"><label for="fmonto">Valor aproximado</label>${dinero('fmonto', f.monto, 'required')}</div>
+          <div class="field"><label for="fdia">Día del mes</label><input id="fdia" name="fdia" class="input" inputmode="numeric" maxlength="2" value="${esc(f.dia || '')}" placeholder="1 a 31"></div></div>
+        <div class="field"><label for="fcat">Categoría</label><select id="fcat" name="fcat" class="input">${CATS.filter(k => k.id !== 'deudas').map(k => `<option value="${k.id}" ${k.id === (f.categoria || 'hogar') ? 'selected' : ''}>${esc(k.n)}</option>`).join('')}</select></div>
+        <div class="field"><span class="lab">¿Quién lo paga normalmente?</span>${seg('fpago', quienes(), f.pagadoPor || yo())}</div>
+        <div class="field"><span class="lab">¿De quién es?</span>${seg('ftipo', [['compartido', 'De los dos'], ['a', nom('a')], ['b', nom('b')]], f.tipo || 'compartido')}</div>
+        <label class="check" for="fsub"><input type="checkbox" id="fsub" name="fsub" ${f.suscripcion ? 'checked' : ''}><span>Es una suscripción (streaming, apps, gimnasio…)</span></label>
+        <button class="btn full">Guardar</button>
+        ${f.id ? `<div id="borrarZona"><button type="button" class="btn danger full" data-act="pedirBorrar" data-col="fijos" data-id="${esc(f.id)}">Eliminar gasto fijo</button></div>` : ''}
+      </form>`;
+  }
+
+  /* ---------- Cuentas y patrimonio ---------- */
+  const TIPOS_CUENTA = { banco: 'Cuenta bancaria', ahorro: 'Ahorros', efectivo: 'Efectivo', inversion: 'Inversión o CDT', cesantias: 'Cesantías o pensión voluntaria', bien: 'Bien (carro, casa, moto)', otro: 'Otro' };
+  function patrimonio() {
+    const activos = sum(S.cuentas, x => x.saldo);
+    const deudas = sum(S.deudas, d => estadoDeuda(d).saldo);
+    const de = p => sum(S.cuentas, x => (x.dueno || 'ambos') === p ? x.saldo : (x.dueno || 'ambos') === 'ambos' ? x.saldo / 2 : 0)
+      - sum(S.deudas, d => { const r = d.responsable || 'ambos', sd = estadoDeuda(d).saldo; return r === p ? sd : r === 'ambos' ? sd * (p === 'a' ? ratioA() : 1 - ratioA()) : 0; });
+    return { activos, deudas, neto: activos - deudas, a: de('a'), b: de('b') };
+  }
+  const haceDias = ts => { if (!ts) return ''; const d = Math.floor((Date.now() - ts) / 864e5); return d <= 0 ? 'hoy' : d === 1 ? 'ayer' : 'hace ' + d + ' días'; };
+  function vistaCuentas() {
+    const p = patrimonio();
+    return `<h2>Patrimonio de los dos</h2>
+      <p class="muted" style="margin-top:-6px">Lo que tienen menos lo que deben. Actualicen los saldos cada mes para ver si van creciendo.</p>
+      <div class="nums-sheet">
+        <div><small>Lo que tienen</small><b class="num" style="color:var(--ok)">${pesos(p.activos)}</b></div>
+        <div><small>Lo que deben</small><b class="num" style="color:var(--bad)">${pesos(p.deudas)}</b></div>
+        <div><small>Patrimonio de ${esc(nom('a'))}</small><b class="num">${pesos(p.a)}</b></div>
+        <div><small>Patrimonio de ${esc(nom('b'))}</small><b class="num">${pesos(p.b)}</b></div>
+      </div>
+      <div class="list" style="margin-top:14px">${S.cuentas.slice().sort((a, b) => b.saldo - a.saldo).map((x, i) => `<button class="item" style="--i:${i}" data-act="editarCuenta" data-id="${esc(x.id)}">
+        <span class="ico" style="background:var(--${(x.dueno || 'ambos') === 'b' ? 'malva' : 'lila'})">${ICON.bank}</span>
+        <span class="t"><b>${esc(x.nombre)}</b><small>${esc(TIPOS_CUENTA[x.tipo] || 'Cuenta')} · ${esc((x.dueno || 'ambos') === 'ambos' ? 'De los dos' : 'De ' + nom(x.dueno))} · ${esc(haceDias(x.actualizado))}</small></span>
+        <span class="m">${pesos(x.saldo)}</span></button>`).join('') || '<p class="muted">Agreguen sus cuentas, ahorros, CDT o cesantías.</p>'}</div>
+      <button class="btn full" style="margin-top:14px" data-act="nuevaCuenta">Agregar cuenta o bien</button>`;
+  }
+  function formCuenta(x = {}) {
+    return `<h2>${x.id ? 'Actualizar cuenta' : 'Nueva cuenta'}</h2>
+      <form data-form="cuenta" data-id="${esc(x.id || '')}">
+        <div class="field"><label for="cnombre">Nombre</label><input id="cnombre" name="cnombre" class="input" maxlength="40" required value="${esc(x.nombre || '')}" placeholder="Ej: Ahorros Nu, CDT Bancolombia"></div>
+        <div class="field"><label for="ctipo">Tipo</label><select id="ctipo" name="ctipo" class="input">${Object.entries(TIPOS_CUENTA).map(([k, n]) => `<option value="${k}" ${k === (x.tipo || 'banco') ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
+        <div class="field"><label for="csaldo">Saldo o valor hoy</label>${dinero('csaldo', x.saldo, 'required')}</div>
+        <div class="field"><span class="lab">¿De quién es?</span>${seg('cdueno', [['ambos', 'De los dos'], ['a', nom('a')], ['b', nom('b')]], x.dueno || 'ambos')}</div>
+        <button class="btn full">Guardar</button>
+        ${x.id ? `<div id="borrarZona"><button type="button" class="btn danger full" data-act="pedirBorrar" data-col="cuentas" data-id="${esc(x.id)}">Eliminar</button></div>` : ''}
+      </form>`;
+  }
+
+  /* ---------- Plata personal ---------- */
+  function plataPersonal(mes) {
+    const m = (S.cfg && S.cfg.mesada) || {};
+    const gastado = p => sum(S.gastos.filter(x => x.tipo === p && mesDe(x.fecha) === mes && x.categoria !== 'deudas' && x.categoria !== 'ajuste'));
+    return { a: { tope: m.a || 0, usado: gastado('a') }, b: { tope: m.b || 0, usado: gastado('b') } };
+  }
+
+  /* ---------- Cita de dinero ---------- */
+  function rachaCitas() {
+    const hechas = new Set(S.citas.filter(x => x.hecho).map(x => x.mes || x.id));
+    let m = mesDe(hoy()); if (!hechas.has(m)) m = sumarMes(m, -1);
+    let n = 0; while (hechas.has(m) && n < 120) { n++; m = sumarMes(m, -1); }
+    return n;
+  }
+  function vistaCita(mes) {
+    const c = calcular(mes), ant = calcular(sumarMes(mes, -1));
+    const cita = S.citas.find(x => (x.mes || x.id) === mes) || {};
+    const dif = ant.gastado ? (c.gastado - ant.gastado) / ant.gastado : 0;
+    const top = Object.entries(c.porCat).filter(([k]) => k !== 'deudas').sort((a, b) => b[1] - a[1]).slice(0, 3);
+    const pres = S.cfg.presupuestos || {};
+    const pasados = Object.entries(pres).filter(([k, v]) => (c.porCat[k] || 0) > v);
+    const pagosDeuda = c.g.filter(x => x.categoria === 'deudas');
+    const net = balance();
+    const revisar = S.gastos.filter(x => x.revisar && !oculto(x));
+    const pp = plataPersonal(mes);
+    const fila = (t, v, cls = '') => `<div class="cita-row"><span>${t}</span><b class="num ${cls}">${v}</b></div>`;
+    return `<h2>Cita de dinero · ${esc(nombreMes(mes, { month: 'long' }))}</h2>
+      <p class="muted" style="margin-top:-6px">Quince minutos, un café y los dos mirando lo mismo. Sin culpas: la idea es ponerse de acuerdo.</p>
+      <div class="cita">
+        <h4>1. Cómo nos fue</h4>
+        ${fila('Ingresos', pesos(c.ingresos))}
+        ${fila('Gastamos', pesos(c.gastado) + (ant.gastado ? ` <small class="${dif > 0 ? 'bad' : 'ok'}">${dif > 0 ? '+' : ''}${Math.round(dif * 100)}% vs mes anterior</small>` : ''))}
+        ${fila('Ahorramos', pesos(c.ahorro) + (c.ingresos ? ` <small>${Math.round(c.ahorro / c.ingresos * 100)}% de los ingresos</small>` : ''), 'ok')}
+        ${pagosDeuda.length ? fila('Abonamos a deudas', pesos(sum(pagosDeuda, x => x.capital ?? x.monto)) + ` <small>intereses ${pesos(sum(pagosDeuda, x => x.interes || 0))}</small>`) : ''}
+        <h4>2. En qué se fue la plata</h4>
+        ${top.map(([k, v]) => fila(esc(CAT[k]?.n || k), pesos(v))).join('') || '<p class="muted">Sin gastos registrados.</p>'}
+        ${pasados.length ? `<p class="muted" style="margin:6px 0 0">Se pasaron en: ${pasados.map(([k, v]) => `<b style="color:var(--bad)">${esc(CAT[k]?.n || k)}</b> (+${pesos((c.porCat[k] || 0) - v)})`).join(', ')}.</p>` : '<p class="muted" style="margin:6px 0 0">Ninguna categoría se pasó del presupuesto.</p>'}
+        <h4>3. Entre nosotros</h4>
+        ${fila('Cuentas claras', net === 0 ? 'A paz y salvo' : `${esc(nom(net > 0 ? 'b' : 'a'))} le debe ${pesos(Math.abs(net))}`)}
+        ${pp.a.tope || pp.b.tope ? fila('Plata personal', `${esc(nom('a'))} ${corto(pp.a.usado)}/${corto(pp.a.tope)} · ${esc(nom('b'))} ${corto(pp.b.usado)}/${corto(pp.b.tope)}`) : ''}
+        ${revisar.length ? `<p style="margin:6px 0 0"><b>${revisar.length} gasto${revisar.length === 1 ? '' : 's'} para conversar:</b> ${revisar.slice(0, 5).map(x => esc(descDe(x)) + ' (' + pesos(x.monto) + ')').join(', ')}</p>` : ''}
+        <h4>4. Conversemos</h4>
+        <ul class="preguntas">
+          <li>¿Qué gasto de este mes nos hizo más felices?</li>
+          <li>¿Hubo algún gasto que preferiríamos no repetir?</li>
+          <li>¿Qué plan de diversión queremos para el próximo mes y cuánto le ponemos?</li>
+          <li>¿Vamos bien con las metas y las deudas? ¿Ajustamos algún presupuesto?</li>
+        </ul>
+      </div>
+      <form data-form="cita" data-id="${esc(mes)}">
+        <div class="field"><label for="acuerdos">Acuerdos del mes</label><textarea id="acuerdos" name="acuerdos" class="input" style="font-family:var(--f-body);font-size:14px" maxlength="1000" placeholder="Ej: este mes nada de domicilios entre semana; abonamos $100.000 extra a la Visa.">${esc(cita.acuerdos || '')}</textarea></div>
+        <button class="btn full">${cita.hecho ? 'Guardar acuerdos' : 'Terminamos nuestra cita'}</button>
+      </form>`;
+  }
+
+  /* ---------- Exportar ---------- */
+  async function exportarCSV() {
+    const q = t => '"' + String(t ?? '').replace(/"/g, '""') + '"';
+    const filas = [['Fecha', 'Tipo', 'Descripción', 'Categoría', 'Valor', 'Pagó', 'De quién', 'Nota'].map(q).join(';')];
+    for (const x of S.gastos.slice().sort((a, b) => (a.fecha || '').localeCompare(b.fecha || '')))
+      filas.push([x.fecha, x.categoria === 'ajuste' ? 'Saldar cuentas' : 'Gasto', descDe(x), CAT[x.categoria]?.n || x.categoria, x.monto, nom(x.pagadoPor), x.tipo === 'compartido' ? 'Los dos' : nom(x.tipo), oculto(x) ? '' : x.nota].map(q).join(';'));
+    for (const x of S.ingresos) filas.push([x.fecha, 'Ingreso extra', x.desc, '', x.monto, nom(x.quien), nom(x.quien), ''].map(q).join(';'));
+    for (const x of S.aportes) filas.push([x.fecha, 'Aporte a meta', S.metas.find(m => m.id === x.metaId)?.nombre || 'Meta', 'Ahorro', x.monto, nom(x.quien), nom(x.quien), ''].map(q).join(';'));
+    const csv = '﻿' + filas.join('\r\n');
+    const FS = plugin('Filesystem'), Sh = plugin('Share');
+    if (nativo && FS && Sh) {
+      const r = await FS.writeFile({ path: 'TU-Y-YO-movimientos.csv', data: csv, directory: 'CACHE', encoding: 'utf8' });
+      await Sh.share({ title: 'Movimientos TU Y YO', url: r.uri });
+      return;
+    }
+    try { await navigator.clipboard.writeText(csv); toast('Copiado: pégalo en Excel o Google Sheets'); }
+    catch { abrir(`<h2>Movimientos</h2><p class="muted">Selecciona y copia este texto.</p><textarea class="input" readonly style="min-height:260px">${esc(csv)}</textarea>`); }
   }
 
   /* ---------- Hoja inferior ---------- */
@@ -710,6 +928,10 @@
         <div class="field"><span class="lab">¿Quién pagó?</span>${seg('gpago', quienes(), g.pagadoPor || yo())}</div>
         <div class="field"><span class="lab">¿De quién es el gasto?</span>${seg('gtipo', [['compartido', 'De los dos'], ['a', nom('a')], ['b', nom('b')]], g.tipo || 'compartido')}</div>
         <div class="field"><label for="gfecha">Fecha</label><input id="gfecha" name="gfecha" type="date" class="input" value="${esc(g.fecha || hoy())}" required></div>
+        <div class="field"><label for="gnota">Nota para los dos (opcional)</label><input id="gnota" name="gnota" class="input" maxlength="120" value="${esc(g.nota || '')}" placeholder="Ej: era para el cumpleaños de mi papá"></div>
+        <label class="check" for="grev"><input type="checkbox" id="grev" name="grev" ${g.revisar ? 'checked' : ''}><span>Marcar para hablarlo juntos</span></label>
+        <label class="check" for="gpriv" id="campoPriv" ${(g.tipo || 'compartido') === 'compartido' ? 'hidden' : ''}><input type="checkbox" id="gpriv" name="gpriv" ${g.privado ? 'checked' : ''}><span>Privado: mi pareja ve el valor pero no el detalle (ideal para regalos sorpresa)</span></label>
+        ${g.fijoId ? `<input type="hidden" name="gfijo" value="${esc(g.fijoId)}">` : ''}
         ${g.items?.length ? `<div class="field"><span class="lab">Productos leídos de la factura</span><div class="items">${g.items.map(it => `<div><span>${esc(it.descripcion)}</span><span class="num">${pesos(it.valor)}</span></div>`).join('')}</div></div>` : ''}
         <button class="btn full">${nuevo ? 'Guardar gasto' : 'Guardar cambios'}</button>
         ${nuevo ? '' : `<div id="borrarZona"><button type="button" class="btn danger full" data-act="pedirBorrar" data-col="gastos" data-id="${esc(g.id)}">Eliminar</button></div>`}
@@ -833,13 +1055,16 @@
         <div class="field"><span class="lab">¿Cómo reparten los gastos compartidos?</span>${seg('reparto', [['proporcional', 'Según ingresos'], ['mitad', 'Mitad y mitad'], ['custom', 'Personalizado']], c.reparto)}</div>
         <div class="field" id="campoPct" ${c.reparto === 'custom' ? '' : 'hidden'}><label for="pcta">% que pone la persona 1</label><input id="pcta" name="pcta" class="input" inputmode="numeric" value="${esc(c.pctA)}"></div>
         <div class="field"><label for="meta">Meta de ahorro mensual (% de los ingresos)</label><input id="meta" name="meta" class="input" inputmode="numeric" value="${esc(c.metaAhorroPct)}"></div>
-        ${inicial ? '' : `<label class="check" for="rec"><input type="checkbox" id="rec" name="rec" ${c.recordatorios === false ? '' : 'checked'}><span>Avisarme en el celular el día antes y el día que vence cada deuda</span></label>`}
+        ${inicial ? '' : `<div class="row"><div class="field"><label for="ma">Plata personal de ${esc(c.nombres.a || '1')}</label>${dinero('ma', c.mesada?.a)}</div><div class="field"><label for="mb">Plata personal de ${esc(c.nombres.b || '2')}</label>${dinero('mb', c.mesada?.b)}</div></div>
+          <small class="muted" style="margin-top:-8px">Un monto al mes para que cada uno gaste en lo suyo sin dar explicaciones. Cuenta los gastos marcados como «de» esa persona.</small>`}
+        ${inicial ? '' : `<label class="check" for="rec"><input type="checkbox" id="rec" name="rec" ${c.recordatorios === false ? '' : 'checked'}><span>Avisarme en el celular cuando venzan deudas y gastos fijos</span></label>`}
         ${inicial ? '' : `<div class="field"><span class="lab">Presupuesto mensual por categoría</span>
           <button type="button" class="btn soft" data-act="sugerir">${ICON.spark} Sugerir con la regla 50/30/20</button>
           <div style="display:grid;gap:8px">${CATS.filter(k => k.id !== 'deudas').map(k => `<div style="display:grid;grid-template-columns:1fr 140px;gap:10px;align-items:center"><label for="p_${k.id}" style="font-size:14px;font-weight:600"><span class="dot" style="background:${k.c}"></span>${esc(k.n)}</label><input id="p_${k.id}" name="p_${k.id}" class="input money" style="font-size:16px;padding:9px 12px" inputmode="numeric" value="${p[k.id] ? pesos(p[k.id]) : ''}" placeholder="Sin tope"></div>`).join('')}</div></div>`}
         <button class="btn full">${inicial ? 'Empezar' : 'Guardar ajustes'}</button>
       </form>
       ${inicial ? '' : `<div style="display:grid;gap:10px;margin-top:18px">
+        <button class="btn ghost full" data-act="exportar">Exportar todos los movimientos (Excel)</button>
         ${S.modo === 'nube' ? `<button class="btn soft full" data-act="invitar">${ICON.link} Volver a ver el código para mi pareja</button>
           <button class="btn ghost full" data-act="desconectar">Usar solo en este celular</button>` : `<button class="btn soft full" data-act="conectar">${ICON.link} Conectar con mi pareja</button>`}
         <p class="muted" style="font-size:12px;text-align:center">Modo: ${S.modo === 'nube' ? 'sincronizado con Firebase' : 'solo este celular'}</p></div>`}`;
@@ -882,34 +1107,54 @@
     const m0 = mesDe(hoy()), m1 = sumarMes(m0, -1), m2 = sumarMes(m0, -2);
     const dia = (m, d) => diaEn(m, d);
     const ahora = Date.now(), r = 7700000 > 0 ? 4500000 / 7700000 : .5;
-    const cols = { gastos: {}, deudas: {}, metas: {}, aportes: {}, ingresos: {} };
+    const cols = { gastos: {}, deudas: {}, metas: {}, aportes: {}, ingresos: {}, fijos: {}, cuentas: {}, citas: {} };
     let n = 0; const add = (c, o) => { cols[c]['e' + (n++)] = o; };
-    const g = (m, d, desc, monto, cat, pago, tipo = 'compartido') => add('gastos', { desc, monto, fecha: dia(m, d), categoria: cat, pagadoPor: pago, tipo, ratioA: r, creado: ahora - n * 1000 });
+    const g = (m, d, desc, monto, cat, pago, tipo = 'compartido', extra = {}) => add('gastos', { desc, monto, fecha: dia(m, d), categoria: cat, pagadoPor: pago, tipo, ratioA: r, creado: ahora - n * 1000, ...extra });
+    const fijo = o => { const id = 'e' + (n++); cols.fijos[id] = { activo: true, ...o }; return id; };
+    const fArr = fijo({ nombre: 'Arriendo', monto: 1200000, dia: 1, categoria: 'hogar', pagadoPor: 'a', tipo: 'compartido' });
+    const fEpm = fijo({ nombre: 'Servicios EPM', monto: 210000, dia: 6, categoria: 'hogar', pagadoPor: 'b', tipo: 'compartido' });
+    const fNet = fijo({ nombre: 'Internet y celulares', monto: 145000, dia: 8, categoria: 'hogar', pagadoPor: 'a', tipo: 'compartido' });
+    fijo({ nombre: 'Netflix', monto: 44900, dia: 3, categoria: 'diversion', pagadoPor: 'b', tipo: 'compartido', suscripcion: true });
+    fijo({ nombre: 'Spotify Dúo', monto: 22900, dia: 20, categoria: 'diversion', pagadoPor: 'a', tipo: 'compartido', suscripcion: true });
+    fijo({ nombre: 'Gimnasio', monto: 99000, dia: 10, categoria: 'salud', pagadoPor: 'a', tipo: 'a', suscripcion: true });
+    const hoyDia = Number(hoy().slice(8));
+    for (const [fid, fx] of Object.entries(cols.fijos)) for (const m of [m2, m1, m0]) {
+      if (m === m0 && (fx.dia > hoyDia || fid === fNet)) continue;
+      g(m, fx.dia, fx.nombre, fx.monto, fx.categoria, fx.pagadoPor, fx.tipo, { fijoId: fid });
+    }
     for (const [m, k] of [[m2, 1.08], [m1, 1.15], [m0, 1]]) {
       const hasta = m === m0 ? Number(hoy().slice(8)) : 31;
-      const gg = (d, desc, monto, cat, pago, tipo) => { if (d <= hasta) g(m, d, desc, Math.round(monto * k / 100) * 100, cat, pago, tipo); };
-      gg(1, 'Arriendo', 1200000, 'hogar', 'a'); gg(4, 'Mercado Éxito', 385000, 'mercado', 'a'); gg(6, 'Servicios EPM', 210000, 'hogar', 'b');
-      gg(8, 'Internet y celulares', 145000, 'hogar', 'a'); gg(10, 'Domicilio Rappi', 62000, 'comida', 'b'); gg(12, 'Cine y crispetas', 78000, 'diversion', 'b');
+      const gg = (d, desc, monto, cat, pago, tipo, extra) => { if (d <= hasta) g(m, d, desc, Math.round(monto * k / 100) * 100, cat, pago, tipo, extra); };
+      gg(4, 'Mercado Éxito', 385000, 'mercado', 'a'); gg(10, 'Domicilio Rappi', 62000, 'comida', 'b'); gg(12, 'Cine y crispetas', 78000, 'diversion', 'b');
       gg(14, 'Gasolina Terpel', 120000, 'transporte', 'a'); gg(16, 'Mercado D1', 168000, 'mercado', 'b'); gg(18, 'Droguería Cruz Verde', 46000, 'salud', 'a', 'a');
-      gg(20, 'Cena aniversario', 140000, 'diversion', 'a'); gg(22, 'Tenis', 189000, 'ropa', 'b', 'b'); gg(25, 'Comida de Luna', 95000, 'mascotas', 'b');
+      gg(20, 'Cena aniversario', 140000, 'diversion', 'a'); gg(22, 'Tenis', 189000, 'ropa', 'b', 'b', m === m1 ? { nota: 'Estaban en promoción, los necesitaba para correr' } : {}); gg(25, 'Comida de Luna', 95000, 'mascotas', 'b');
       gg(27, 'Almuerzo fuera', 58000, 'comida', 'a');
     }
     add('deudas', { tipo: 'tarjeta', nombre: 'Visa Oro', banco: 'Bancolombia', saldoInicial: 2400000, cuota: 300000, cupo: 5000000, tasa: 29, tasaTipo: 'ea', dia: 5, responsable: 'ambos', creado: ahora - 90 * 864e5 });
     add('deudas', { tipo: 'vehiculo', nombre: 'Crédito del carro', banco: 'Davivienda', saldoInicial: 18000000, cuota: 650000, tasa: 16, tasaTipo: 'ea', dia: 15, plazo: 48, cuotasPrevias: 10, responsable: 'a', creado: ahora - 90 * 864e5 });
-    add('deudas', { tipo: 'personal', nombre: 'Préstamo de mi mamá', banco: 'Familiar o amigo', saldoInicial: 800000, cuota: 200000, dia: ((Number(hoy().slice(8)) + 2) % 28) + 1, responsable: 'b', creado: ahora - 90 * 864e5 });
+    add('deudas', { tipo: 'personal', nombre: 'Préstamo de mi mamá', banco: 'Familiar o amigo', saldoInicial: 800000, cuota: 200000, dia: 2, responsable: 'b', creado: ahora - 90 * 864e5 });
     const ids = Object.keys(cols.deudas);
     for (const [m, quien] of [[m2, 'a'], [m1, 'b'], [m0, 'a']]) {
       add('gastos', { desc: 'Pago Visa Oro', monto: 300000, interes: 48000, capital: 252000, fecha: dia(m, 5), categoria: 'deudas', deudaId: ids[0], pagadoPor: quien, tipo: 'compartido', ratioA: r, creado: ahora - 50 * 864e5 });
       add('gastos', { desc: 'Pago Crédito del carro', monto: 650000, interes: 222000, capital: 428000, fecha: dia(m, 15), categoria: 'deudas', deudaId: ids[1], pagadoPor: 'a', tipo: 'a', creado: ahora - 50 * 864e5 });
-      if (m === m0) continue;
-      add('gastos', { desc: 'Pago Préstamo de mi mamá', monto: 200000, interes: 0, capital: 200000, fecha: dia(m, 28), categoria: 'deudas', deudaId: ids[2], pagadoPor: 'b', tipo: 'b', creado: ahora - 50 * 864e5 });
+      if (m === m0 && Number(hoy().slice(8)) < 2) continue;
+      add('gastos', { desc: 'Pago Préstamo de mi mamá', monto: 200000, interes: 0, capital: 200000, fecha: dia(m, 2), categoria: 'deudas', deudaId: ids[2], pagadoPor: 'b', tipo: 'b', creado: ahora - 50 * 864e5 });
     }
     add('metas', { nombre: 'Viaje a Cartagena', objetivo: 3500000, fechaLimite: dia(sumarMes(m0, 8), 15) });
     add('metas', { nombre: 'Fondo de emergencia', objetivo: 6000000, fechaLimite: null });
     const metas = Object.keys(cols.metas);
     for (const m of [m2, m1, m0]) { add('aportes', { metaId: metas[0], monto: 300000, quien: 'a', fecha: dia(m, 2), creado: ahora }); add('aportes', { metaId: metas[1], monto: 250000, quien: 'b', fecha: dia(m, 3), creado: ahora }); }
     add('ingresos', { monto: 450000, desc: 'Venta de postres', quien: 'b', fecha: dia(m0, 9) });
-    const cfg = Object.assign(cfgBase(), { nombres: { a: 'Andrés', b: 'Camila' }, ingresos: { a: 4500000, b: 3200000 }, metaAhorroPct: 15,
+    g(m0, Math.max(1, Number(hoy().slice(8)) - 1), 'Pedido Amazon', 268000, 'otros', 'a', 'compartido', { revisar: true, nota: '¿De verdad necesitábamos la freidora de aire?' });
+    g(m0, Math.max(1, Number(hoy().slice(8)) - 2), 'Regalo sorpresa', 150000, 'regalos', 'a', 'a', { privado: true });
+    add('cuentas', { nombre: 'Cuenta de ahorros Bancolombia', tipo: 'banco', saldo: 3850000, dueno: 'ambos', actualizado: ahora - 3 * 864e5 });
+    add('cuentas', { nombre: 'Cajita Nu', tipo: 'ahorro', saldo: 2100000, dueno: 'b', actualizado: ahora - 864e5 });
+    add('cuentas', { nombre: 'CDT Davivienda', tipo: 'inversion', saldo: 5000000, dueno: 'a', actualizado: ahora - 20 * 864e5 });
+    add('cuentas', { nombre: 'Cesantías Porvenir', tipo: 'cesantias', saldo: 4300000, dueno: 'a', actualizado: ahora - 30 * 864e5 });
+    add('cuentas', { nombre: 'Carro (valor comercial)', tipo: 'bien', saldo: 42000000, dueno: 'a', actualizado: ahora - 60 * 864e5 });
+    cols.citas[m2] = { mes: m2, hecho: true, fecha: dia(m2, 30), acuerdos: 'Cocinar en casa entre semana.' };
+    cols.citas[m1] = { mes: m1, hecho: true, fecha: dia(m1, 30), acuerdos: 'Abonar $100.000 extra a la Visa y nada de domicilios entre semana.' };
+    const cfg = Object.assign(cfgBase(), { nombres: { a: 'Andrés', b: 'Camila' }, ingresos: { a: 4500000, b: 3200000 }, mesada: { a: 300000, b: 300000 }, metaAhorroPct: 15,
       presupuestos: { mercado: 600000, hogar: 1650000, transporte: 250000, comida: 200000, diversion: 350000, salud: 120000, ropa: 200000, mascotas: 120000, regalos: 100000, otros: 150000 } });
     Store.guardarLocal({ cfg, cols }); Store.iniciarLocal(); confeti(); toast('Datos de ejemplo cargados');
   }
@@ -972,12 +1217,22 @@
       case 'nuevoIngreso': abrir(formIngreso()); break;
       case 'elegirDeuda': abrir(`<h2>¿Qué deuda pagaron?</h2><div class="menu">${S.deudas.filter(d => estadoDeuda(d).saldo > 0).map((d, i) => `<button style="--i:${i}" data-act="pagarDeuda" data-id="${esc(d.id)}"><span class="ico" style="background:var(--lila)">${ICON.card}</span><span><b>${esc(d.nombre)}</b><small>Saldo ${pesos(estadoDeuda(d).saldo)}</small></span></button>`).join('') || '<p class="muted">No hay deudas activas.</p>'}</div>`); break;
       case 'elegirMeta': abrir(`<h2>¿A qué meta aportan?</h2><div class="menu">${S.metas.map((m, i) => `<button style="--i:${i}" data-act="aportar" data-id="${esc(m.id)}"><span class="ico" style="background:var(--ok)">${ICON.piggy}</span><span><b>${esc(m.nombre)}</b><small>${Math.round(estadoMeta(m).pct * 100)}% logrado</small></span></button>`).join('') || '<p class="muted">Aún no hay metas. Créenlas en Planes.</p>'}</div>`); break;
-      case 'editarGasto': { const g = S.gastos.find(x => x.id === id); if (g) abrir(formGasto(g)); break; }
+      case 'editarGasto': { const g = S.gastos.find(x => x.id === id); if (g) abrir(oculto(g) ? `<h2>Gasto personal</h2><p class="muted">${esc(nom(g.tipo))} marcó este gasto como privado: ves el valor (${pesos(g.monto)}), no el detalle.</p>` : formGasto(g)); break; }
       case 'editarDeuda': { const d = S.deudas.find(x => x.id === id); if (d) abrir(formDeuda(d)); break; }
       case 'pagarDeuda': { const d = S.deudas.find(x => x.id === id); if (d) { abrir(formPagoDeuda(d)); resumenPago($('form[data-form=pagoDeuda]')); } break; }
       case 'editarMeta': { const m = S.metas.find(x => x.id === id); if (m) abrir(formMeta(m)); break; }
       case 'aportar': { const m = S.metas.find(x => x.id === id); if (m) abrir(formAporte(m)); break; }
       case 'editarIngreso': { const x = S.ingresos.find(y => y.id === id); if (x) abrir(formIngreso(x)); break; }
+      case 'nuevoFijo': abrir(formFijo()); break;
+      case 'editarFijo': { const x = S.fijos.find(y => y.id === id); if (x) abrir(formFijo(x)); break; }
+      case 'pagarFijo': { const x = S.fijos.find(y => y.id === id); if (!x) break; const mes = t.dataset.mes || mesDe(hoy());
+        abrir(formGasto({ desc: x.nombre, monto: x.monto, categoria: x.categoria, pagadoPor: x.pagadoPor, tipo: x.tipo, fecha: mes === mesDe(hoy()) ? hoy() : diaEn(mes, x.dia || 1), fijoId: x.id }, 'Confirma el valor: si este mes cambió (por ejemplo, los servicios), corrígelo.')); break; }
+      case 'cuentas': abrir(vistaCuentas()); break;
+      case 'nuevaCuenta': abrir(formCuenta()); break;
+      case 'editarCuenta': { const x = S.cuentas.find(y => y.id === id); if (x) abrir(formCuenta(x)); break; }
+      case 'cita': abrir(vistaCita(S.mes)); break;
+      case 'hablado': { const g = S.gastos.find(x => x.id === id); if (!g) break; const d = { ...g }; delete d.id; delete d.revisar; await Store.poner('gastos', id, d); toast('Listo, ya lo hablaron'); break; }
+      case 'exportar': try { await exportarCSV(); } catch (err) { console.error(err); toast('No se pudo exportar'); } break;
       case 'verDeuda': { const d = S.deudas.find(x => x.id === id); if (d) abrir(vistaDeuda(d)); break; }
       case 'pedirBorrar': $('#borrarZona').innerHTML = borrarConfirm(t.dataset.col, id); break;
       case 'cancelBorrar': $('#borrarZona').innerHTML = `<button type="button" class="btn danger full" data-act="pedirBorrar" data-col="${esc(t.dataset.col)}" data-id="${esc(id)}">Eliminar</button>`; break;
@@ -1032,7 +1287,9 @@
       ['nuevoGasto', ICON.pen, '#5B7BE0', 'Anotar gasto', 'Escribe el valor y la categoría'],
       ['elegirDeuda', ICON.card, '#7A5C99', 'Pagar una deuda', 'Registra quién pagó la cuota'],
       ['elegirMeta', ICON.piggy, 'var(--ok)', 'Aportar a una meta', 'Suma a sus ahorros'],
-      ['nuevoIngreso', ICON.up, '#2F9FB3', 'Ingreso extra', 'Primas, ventas, bonos']
+      ['nuevoIngreso', ICON.up, '#2F9FB3', 'Ingreso extra', 'Primas, ventas, bonos'],
+      ['nuevoFijo', ICON.repeat, '#DD8436', 'Gasto fijo o suscripción', 'Arriendo, servicios, Netflix…'],
+      ['nuevaCuenta', ICON.bank, '#6A6FD8', 'Cuenta o ahorro', 'Para ver su patrimonio']
     ];
     abrir(`<h2>¿Qué quieren registrar?</h2><div class="menu">${op.map(([a, ic, col, t, d], i) => `<button style="--i:${i}" data-act="${a}"><span class="ico" style="background:${col}">${ic}</span><span><b>${t}</b><small>${d}</small></span></button>`).join('')}</div>`);
     fab.setAttribute('aria-expanded', 'true');
@@ -1046,10 +1303,12 @@
     if (el.classList.contains('money')) { const n = digitos(el.value); el.value = n ? pesos(n) : ''; }
     if (el.name === 'gcat') { const c = $('#campoDeuda'); if (c) c.hidden = el.value !== 'deudas'; }
     if (el.form?.dataset.form === 'pagoDeuda') resumenPago(el.form);
+    if (el.id === 'buscar') { S.buscar = el.value; const l = $('#listaG'); if (l) l.innerHTML = listaGastos(); }
   });
   document.addEventListener('change', e => {
     if (e.target.name === 'reparto') { const c = $('#campoPct'); if (c) c.hidden = e.target.value !== 'custom'; }
     if (e.target.name === 'dtipo') { const t = e.target.value === 'tarjeta'; $('#campoCupo').hidden = !t; $('#campoPlazo').hidden = t; $('#lblCuota').textContent = t ? 'Pago mínimo o lo que pagan al mes' : 'Cuota mensual'; }
+    if (e.target.name === 'gtipo') { const c = $('#campoPriv'); if (c) c.hidden = e.target.value === 'compartido'; }
     if (e.target.name === 'dresp') { const n = $('#notaConjunta'); if (n) n.hidden = e.target.value !== 'ambos'; }
     if (e.target.name === 'ptipo') { const c = $('#campoInt'), f = e.target.form; if (c) c.hidden = e.target.value === 'abono' || Number(f.dataset.i) === 0; }
     if (e.target.form?.dataset.form === 'pagoDeuda') resumenPago(e.target.form);
@@ -1074,6 +1333,10 @@
           deudaId: cat === 'deudas' ? (v('gdeuda') || null) : null, creado: prev?.creado || Date.now() };
         if (data.tipo === 'compartido') data.ratioA = prev?.tipo === 'compartido' && typeof prev.ratioA === 'number' ? prev.ratioA : ratioA();
         const its = prev?.items || leerItemsDeForm(f); if (its?.length) data.items = its.slice(0, 40);
+        const nota = v('gnota').trim().slice(0, 120); if (nota) data.nota = nota;
+        if (f.elements.grev?.checked) data.revisar = true;
+        if (data.tipo !== 'compartido' && f.elements.gpriv?.checked) data.privado = true;
+        const fijoId = v('gfijo') || prev?.fijoId; if (fijoId) data.fijoId = fijoId;
         if (data.deudaId) {
           const interes = prev && prev.deudaId === data.deudaId ? Math.min(monto, prev.interes || 0) : 0;
           data.interes = interes; data.capital = monto - interes; data.abono = !!prev?.abono;
@@ -1101,6 +1364,22 @@
           if (saldoForm > (prev.saldoInicial || 0)) data.saldoInicial = saldoForm;
         }
         await Store.poner('deudas', id, data); vibrar(); cerrar(); toast('Deuda guardada');
+      } else if (tipo === 'fijo') {
+        const dia = Math.round(Number(v('fdia')));
+        const data = { nombre: v('fnombre').trim().slice(0, 40), monto: digitos(v('fmonto')), dia: dia >= 1 && dia <= 31 ? dia : null,
+          categoria: CAT[v('fcat')] ? v('fcat') : 'hogar', pagadoPor: v('fpago') === 'b' ? 'b' : 'a',
+          tipo: ['a', 'b'].includes(v('ftipo')) ? v('ftipo') : 'compartido', suscripcion: !!f.elements.fsub?.checked, activo: true };
+        if (!data.nombre || !data.monto) { toast('Pon nombre y valor'); return; }
+        await Store.poner('fijos', id, data); vibrar(); cerrar(); toast('Gasto fijo guardado');
+      } else if (tipo === 'cuenta') {
+        const data = { nombre: v('cnombre').trim().slice(0, 40), tipo: TIPOS_CUENTA[v('ctipo')] ? v('ctipo') : 'otro', saldo: digitos(v('csaldo')),
+          dueno: ['a', 'b'].includes(v('cdueno')) ? v('cdueno') : 'ambos', actualizado: Date.now() };
+        if (!data.nombre) { toast('Pon un nombre'); return; }
+        await Store.poner('cuentas', id, data); vibrar(); toast('Cuenta guardada'); abrir(vistaCuentas());
+      } else if (tipo === 'cita') {
+        const prev = S.citas.find(x => (x.mes || x.id) === id);
+        await Store.poner('citas', id, { mes: id, acuerdos: v('acuerdos').trim().slice(0, 1000), hecho: true, fecha: prev?.fecha || hoy() });
+        vibrar(); cerrar(); if (!prev?.hecho) { confeti(); toast('¡Cita cumplida! Racha: ' + rachaCitas() + ' mes' + (rachaCitas() === 1 ? '' : 'es')); } else toast('Acuerdos guardados');
       } else if (tipo === 'saldoReal') {
         const d = S.deudas.find(x => x.id === id); const n = digitos(v('sreal'));
         if (!d || !v('sreal').trim()) { toast('Escribe el saldo del extracto'); return; }
@@ -1139,7 +1418,7 @@
         c.reparto = ['proporcional', 'mitad', 'custom'].includes(v('reparto')) ? v('reparto') : 'proporcional';
         c.pctA = Math.min(100, Math.max(0, Number(v('pcta')) || 50));
         c.metaAhorroPct = Math.min(90, Math.max(0, Number(v('meta')) || 0));
-        if (!f.dataset.inicial) c.recordatorios = !!f.elements.rec?.checked;
+        if (!f.dataset.inicial) { c.recordatorios = !!f.elements.rec?.checked; c.mesada = { a: digitos(v('ma')), b: digitos(v('mb')) }; }
         if (!f.dataset.inicial) { const p = {}; for (const k of CATS) { const n = digitos(v('p_' + k.id)); if (n) p[k.id] = n; } c.presupuestos = p; }
         if (!c.nombres.a || !c.nombres.b) { toast('Escriban los dos nombres'); return; }
         await Store.guardarCfg(c); vibrar(); cerrar();
@@ -1173,15 +1452,16 @@
   function programarRecordatorios() {
     const LN = plugin('LocalNotifications'); if (!nativo || !LN || !S.cfg) return;
     const activas = S.deudas.filter(d => d.dia && estadoDeuda(d).saldo > 0).slice(0, 100);
-    const firma = (S.cfg.recordatorios === false ? 'off' : 'on') + JSON.stringify(activas.map(d => [d.id, d.dia, d.nombre, d.cuota, bancoDe(d)]));
+    const fijosR = S.fijos.filter(f => f.dia && f.activo !== false).slice(0, 100);
+    const firma = (S.cfg.recordatorios === false ? 'off' : 'on') + JSON.stringify(activas.map(d => [d.id, d.dia, d.nombre, d.cuota, bancoDe(d)])) + JSON.stringify(fijosR.map(f => [f.id, f.dia, f.nombre, f.monto]));
     if (firma === recFirma) return; recFirma = firma;
     clearTimeout(recT);
     recT = setTimeout(async () => {
       try {
         const pend = await LN.getPending();
-        const viejas = (pend.notifications || []).filter(n => n.id >= 7000 && n.id < 7400);
+        const viejas = (pend.notifications || []).filter(n => n.id >= 7000 && n.id < 7600);
         if (viejas.length) await LN.cancel({ notifications: viejas.map(n => ({ id: n.id })) });
-        if (S.cfg.recordatorios === false || !activas.length) return;
+        if (S.cfg.recordatorios === false || !(activas.length + fijosR.length)) return;
         let perm = await LN.checkPermissions();
         if (perm.display !== 'granted') perm = await LN.requestPermissions();
         if (perm.display !== 'granted') return;
@@ -1191,6 +1471,7 @@
           if (d.dia > 1) nots.push({ id: 7000 + k * 2, title: `Se acerca el pago de ${d.nombre}`, body: `Vence el día ${d.dia}. ${cuerpo}`, schedule: { on: { day: Math.min(d.dia - 1, 28), hour: 19, minute: 0 }, allowWhileIdle: true } });
           if (d.dia <= 28) nots.push({ id: 7001 + k * 2, title: `Hoy vence ${d.nombre}`, body: cuerpo, schedule: { on: { day: d.dia, hour: 8, minute: 0 }, allowWhileIdle: true } });
         });
+        fijosR.forEach((f, k) => nots.push({ id: 7400 + k, title: `Hoy se paga ${f.nombre}`, body: `${pesos(f.monto)}. Cuando lo paguen, márquenlo como pagado en TU Y YO.`, schedule: { on: { day: Math.min(f.dia, 28), hour: 9, minute: 0 }, allowWhileIdle: true } }));
         if (nots.length) await LN.schedule({ notifications: nots });
       } catch (err) { console.error('recordatorios', err); recFirma = ''; }
     }, 1500);
