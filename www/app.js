@@ -21,6 +21,7 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin almacenamiento */ } },
     del(k) { try { localStorage.removeItem(k); } catch { /* nada */ } }
   };
+  const PREVIEW = !!window.TUYYO_PREVIEW;
   const Cap = window.Capacitor;
   const nativo = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
   const plugin = n => (Cap && Cap.Plugins && Cap.Plugins[n]) || null;
@@ -364,7 +365,7 @@
       <h2>${esc(nombreMes(S.mes))}</h2>
       <button class="icon-btn" data-act="mes" data-n="1" aria-label="Mes siguiente">${ICON.right}</button>
     </div>` : '<div style="height:6px"></div>'}
-    ${S.modo === 'local' ? `<div class="banner">${ICON.link}<span>Solo en este celular. Conecta a tu pareja para compartir todo.</span><button class="btn soft" data-act="conectar" style="padding:8px 12px">Conectar</button></div>` : ''}`;
+    ${S.modo === 'local' ? `<div class="banner">${ICON.link}<span>${PREVIEW ? 'Vista previa: los datos quedan solo en este dispositivo.' : 'Solo en este celular. Conecta a tu pareja para compartir todo.'}</span><button class="btn soft" data-act="conectar" style="padding:8px 12px">${PREVIEW ? 'Opciones' : 'Conectar'}</button></div>` : ''}`;
   }
 
   function vistaBienvenida() {
@@ -375,6 +376,7 @@
       <div class="menu">
         <button style="--i:0" data-act="setup"><span class="ico" style="background:var(--lila)">${ICON.heart}</span><span><b>Empezar nuestro presupuesto</b><small>Configura nombres e ingresos en un minuto</small></span></button>
         <button style="--i:1" data-act="unirme"><span class="ico" style="background:var(--malva)">${ICON.link}</span><span><b>Mi pareja ya lo creó</b><small>Pega el código que te compartió</small></span></button>
+        ${PREVIEW ? `<button style="--i:2" data-act="ejemplo"><span class="ico" style="background:#5B7BE0">${ICON.spark}</span><span><b>Ver con datos de ejemplo</b><small>Una pareja ficticia con gastos, deudas y metas</small></span></button>` : ''}
       </div>
     </div>`;
   }
@@ -871,6 +873,47 @@
       <div class="row" style="margin-top:12px"><button class="btn" data-act="compartirCod">Compartir</button><button class="btn soft" data-act="copiarCod">Copiar</button></div>`;
   }
 
+  /* ---------- Vista previa ---------- */
+  function soloApp() {
+    return `<h2>Esto funciona en la app Android</h2><p class="muted">Conectar los dos celulares necesita la app instalada y tu proyecto de Firebase. Aquí puedes probar todo lo demás en este dispositivo.</p>
+      <button class="btn soft full" data-act="reiniciar">Borrar datos de prueba y empezar de cero</button>`;
+  }
+  function cargarEjemplo() {
+    const m0 = mesDe(hoy()), m1 = sumarMes(m0, -1), m2 = sumarMes(m0, -2);
+    const dia = (m, d) => diaEn(m, d);
+    const ahora = Date.now(), r = 7700000 > 0 ? 4500000 / 7700000 : .5;
+    const cols = { gastos: {}, deudas: {}, metas: {}, aportes: {}, ingresos: {} };
+    let n = 0; const add = (c, o) => { cols[c]['e' + (n++)] = o; };
+    const g = (m, d, desc, monto, cat, pago, tipo = 'compartido') => add('gastos', { desc, monto, fecha: dia(m, d), categoria: cat, pagadoPor: pago, tipo, ratioA: r, creado: ahora - n * 1000 });
+    for (const [m, k] of [[m2, 1.08], [m1, 1.15], [m0, 1]]) {
+      const hasta = m === m0 ? Number(hoy().slice(8)) : 31;
+      const gg = (d, desc, monto, cat, pago, tipo) => { if (d <= hasta) g(m, d, desc, Math.round(monto * k / 100) * 100, cat, pago, tipo); };
+      gg(1, 'Arriendo', 1200000, 'hogar', 'a'); gg(4, 'Mercado Éxito', 385000, 'mercado', 'a'); gg(6, 'Servicios EPM', 210000, 'hogar', 'b');
+      gg(8, 'Internet y celulares', 145000, 'hogar', 'a'); gg(10, 'Domicilio Rappi', 62000, 'comida', 'b'); gg(12, 'Cine y crispetas', 78000, 'diversion', 'b');
+      gg(14, 'Gasolina Terpel', 120000, 'transporte', 'a'); gg(16, 'Mercado D1', 168000, 'mercado', 'b'); gg(18, 'Droguería Cruz Verde', 46000, 'salud', 'a', 'a');
+      gg(20, 'Cena aniversario', 140000, 'diversion', 'a'); gg(22, 'Tenis', 189000, 'ropa', 'b', 'b'); gg(25, 'Comida de Luna', 95000, 'mascotas', 'b');
+      gg(27, 'Almuerzo fuera', 58000, 'comida', 'a');
+    }
+    add('deudas', { tipo: 'tarjeta', nombre: 'Visa Oro', banco: 'Bancolombia', saldoInicial: 2400000, cuota: 300000, cupo: 5000000, tasa: 29, tasaTipo: 'ea', dia: 5, responsable: 'ambos', creado: ahora - 90 * 864e5 });
+    add('deudas', { tipo: 'vehiculo', nombre: 'Crédito del carro', banco: 'Davivienda', saldoInicial: 18000000, cuota: 650000, tasa: 16, tasaTipo: 'ea', dia: 15, plazo: 48, cuotasPrevias: 10, responsable: 'a', creado: ahora - 90 * 864e5 });
+    add('deudas', { tipo: 'personal', nombre: 'Préstamo de mi mamá', banco: 'Familiar o amigo', saldoInicial: 800000, cuota: 200000, dia: ((Number(hoy().slice(8)) + 2) % 28) + 1, responsable: 'b', creado: ahora - 90 * 864e5 });
+    const ids = Object.keys(cols.deudas);
+    for (const [m, quien] of [[m2, 'a'], [m1, 'b'], [m0, 'a']]) {
+      add('gastos', { desc: 'Pago Visa Oro', monto: 300000, interes: 48000, capital: 252000, fecha: dia(m, 5), categoria: 'deudas', deudaId: ids[0], pagadoPor: quien, tipo: 'compartido', ratioA: r, creado: ahora - 50 * 864e5 });
+      add('gastos', { desc: 'Pago Crédito del carro', monto: 650000, interes: 222000, capital: 428000, fecha: dia(m, 15), categoria: 'deudas', deudaId: ids[1], pagadoPor: 'a', tipo: 'a', creado: ahora - 50 * 864e5 });
+      if (m === m0) continue;
+      add('gastos', { desc: 'Pago Préstamo de mi mamá', monto: 200000, interes: 0, capital: 200000, fecha: dia(m, 28), categoria: 'deudas', deudaId: ids[2], pagadoPor: 'b', tipo: 'b', creado: ahora - 50 * 864e5 });
+    }
+    add('metas', { nombre: 'Viaje a Cartagena', objetivo: 3500000, fechaLimite: dia(sumarMes(m0, 8), 15) });
+    add('metas', { nombre: 'Fondo de emergencia', objetivo: 6000000, fechaLimite: null });
+    const metas = Object.keys(cols.metas);
+    for (const m of [m2, m1, m0]) { add('aportes', { metaId: metas[0], monto: 300000, quien: 'a', fecha: dia(m, 2), creado: ahora }); add('aportes', { metaId: metas[1], monto: 250000, quien: 'b', fecha: dia(m, 3), creado: ahora }); }
+    add('ingresos', { monto: 450000, desc: 'Venta de postres', quien: 'b', fecha: dia(m0, 9) });
+    const cfg = Object.assign(cfgBase(), { nombres: { a: 'Andrés', b: 'Camila' }, ingresos: { a: 4500000, b: 3200000 }, metaAhorroPct: 15,
+      presupuestos: { mercado: 600000, hogar: 1650000, transporte: 250000, comida: 200000, diversion: 350000, salud: 120000, ropa: 200000, mascotas: 120000, regalos: 100000, otros: 150000 } });
+    Store.guardarLocal({ cfg, cols }); Store.iniciarLocal(); confeti(); toast('Datos de ejemplo cargados');
+  }
+
   /* ---------- Escaneo de facturas ---------- */
   async function tomarFoto(origen) {
     const Cam = plugin('Camera');
@@ -902,7 +945,7 @@
     } catch (e) {
       console.error(e);
       if (!sheetBody.querySelector('.scan')) return;
-      sheetBody.innerHTML = formGasto({}, 'No pudimos leer la foto (revisa tu conexión la primera vez). Anota el gasto a mano.');
+      sheetBody.innerHTML = formGasto({}, PREVIEW ? 'En esta vista previa no se puede leer la foto. En la app Android la factura se lee sola.' : 'No pudimos leer la foto (revisa tu conexión la primera vez). Anota el gasto a mano.');
     }
   }
 
@@ -917,8 +960,10 @@
       case 'filtro': S.filtro = t.dataset.f; render(); break;
       case 'ajustes': abrir(formAjustes(false)); break;
       case 'setup': abrir(formAjustes(true)); break;
-      case 'unirme': abrir(formUnirme()); break;
-      case 'conectar': abrir(formConectar()); break;
+      case 'unirme': abrir(PREVIEW ? soloApp() : formUnirme()); break;
+      case 'conectar': abrir(PREVIEW ? soloApp() : formConectar()); break;
+      case 'ejemplo': cargarEjemplo(); break;
+      case 'reiniciar': ls.del(LOCAL); S.tab = 'inicio'; cerrar(); Store.iniciarLocal(); break;
       case 'escanear': cerrarMenu(); tomarFoto('camara'); break;
       case 'galeria': cerrarMenu(); tomarFoto('galeria'); break;
       case 'nuevoGasto': abrir(formGasto()); break;
