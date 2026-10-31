@@ -223,9 +223,8 @@
     const metaAhorro = ingresos * (cfg.metaAhorroPct || 0) / 100;
     const pagadoPor = { a: sum(g.filter(x => x.pagadoPor === 'a')), b: sum(g.filter(x => x.pagadoPor === 'b')) };
     const cuotasPend = S.deudas.reduce((a, d) => {
-      const st = estadoDeuda(d); if (st.saldo <= 0) return a;
-      const pagadoMes = sum(S.gastos.filter(x => x.deudaId === d.id && mesDe(x.fecha) === mes));
-      return a + Math.max(0, Math.min(d.cuota || 0, st.saldo) - pagadoMes);
+      const st = estadoDeuda(d); if (st.saldo <= 0 && !st.pagadoMes) return a;
+      return st.alDia ? a : a + Math.max(0, st.cuotaMes - st.pagadoMes);
     }, 0);
     const libre = ingresos - gastado - ahorro;
     const libreReal = libre - Math.max(0, metaAhorro - ahorro) - (mes === mesDe(hoy()) ? cuotasPend : 0);
@@ -242,12 +241,73 @@
     }
     return Math.round(netA);
   }
+  const BANCOS = ['Bancolombia', 'Davivienda', 'Banco de Bogotá', 'BBVA', 'Banco de Occidente', 'Banco Popular', 'AV Villas', 'Scotiabank Colpatria', 'Banco Caja Social', 'Banco Agrario', 'Itaú', 'Nu Colombia', 'Banco Falabella', 'Lulo Bank', 'RappiCard', 'Banco Finandina', 'Banco Serfinanza', 'Banco W', 'Bancamía', 'Coomeva', 'Fondo de empleados', 'Cooperativa', 'Familiar o amigo', 'Almacén o tienda'];
+  const TIPOS_DEUDA = { tarjeta: 'Tarjeta de crédito', consumo: 'Crédito de libre inversión', vehiculo: 'Crédito de vehículo', vivienda: 'Crédito de vivienda', educativo: 'Crédito educativo', personal: 'Préstamo personal', otro: 'Otra deuda' };
+  const tasaMensual = d => { const t = Number(d.tasa) || 0; if (!t) return 0; return d.tasaTipo === 'mv' ? t / 100 : Math.pow(1 + t / 100, 1 / 12) - 1; };
+  function simular(saldo, i, cuota) {
+    if (saldo <= 0) return { meses: 0, intereses: 0, total: 0 };
+    if (!cuota) return null;
+    if (i > 0 && cuota <= saldo * i) return { nunca: true };
+    let s = saldo, m = 0, int = 0;
+    while (s > 0.5 && m < 600) { const x = s * i; int += x; s = s + x - cuota; m++; }
+    return { meses: m, intereses: Math.round(int), total: Math.round(saldo + int) };
+  }
+  const diaEn = (mes, dia) => { const [y, m] = mes.split('-').map(Number); return mes + '-' + pad(Math.min(dia, new Date(y, m, 0).getDate())); };
+  const diasEntre = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5);
+  const fechaCorta = f => { const [y, m, d] = f.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }).replace('.', ''); };
+  const mesesTxt = n => n + ' mes' + (n === 1 ? '' : 'es');
   function estadoDeuda(d) {
-    const pagos = S.gastos.filter(x => x.deudaId === d.id);
-    const pagado = sum(pagos);
-    const saldo = Math.max(0, (d.saldoInicial || 0) - pagado);
-    return { pagado, saldo, pct: d.saldoInicial ? Math.min(1, pagado / d.saldoInicial) : 0, pagos,
-      porA: sum(pagos.filter(x => x.pagadoPor === 'a')), porB: sum(pagos.filter(x => x.pagadoPor === 'b')) };
+    const pagos = S.gastos.filter(x => x.deudaId === d.id).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || '') || (a.creado || 0) - (b.creado || 0));
+    const corte = d.saldoActualizado || 0;
+    const base = corte && d.saldoActual != null ? d.saldoActual : (d.saldoInicial || 0);
+    const posteriores = corte ? pagos.filter(x => (x.creado || 0) > corte) : pagos;
+    const saldo = Math.max(0, Math.round(base - sum(posteriores, x => x.capital ?? x.monto)));
+    const original = Math.max(d.saldoInicial || 0, base);
+    const i = tasaMensual(d);
+    const proy = simular(saldo, i, d.cuota || 0);
+    const mesHoy = mesDe(hoy());
+    const pagadoMes = sum(pagos.filter(x => mesDe(x.fecha) === mesHoy));
+    const cuotaMes = Math.min(d.cuota || 0, saldo + pagadoMes);
+    let alDia = !cuotaMes || pagadoMes >= cuotaMes * 0.98;
+    // Si la deuda se registró después del día de pago de este mes, esa cuota ya estaba pagada.
+    if (!alDia && d.dia && d.creado) { const c = new Date(d.creado); const fc = c.getFullYear() + '-' + pad(c.getMonth() + 1) + '-' + pad(c.getDate()); if (mesDe(fc) === mesHoy && diaEn(mesHoy, d.dia) < fc) alDia = true; }
+    let proximo = null, dias = null;
+    if (d.dia && saldo > 0) { proximo = diaEn(alDia ? sumarMes(mesHoy, 1) : mesHoy, d.dia); dias = diasEntre(hoy(), proximo); }
+    return {
+      pagos, saldo, original, i, proy, pagadoMes, cuotaMes, alDia, proximo, dias,
+      pagado: sum(pagos), intereses: sum(pagos, x => x.interes || 0),
+      pct: original ? Math.min(1, Math.max(0, 1 - saldo / original)) : 0,
+      numCuota: (d.cuotasPrevias || 0) + pagos.filter(x => !x.abono).length,
+      fin: proy && !proy.nunca && proy.meses ? sumarMes(mesHoy, proy.meses - (alDia ? 0 : 1)) : null,
+      porA: sum(pagos.filter(x => x.pagadoPor === 'a')), porB: sum(pagos.filter(x => x.pagadoPor === 'b'))
+    };
+  }
+  function parteCuota(d, quien) {
+    const c = d.cuota || 0, r = d.responsable || 'ambos';
+    if (r === 'ambos') return Math.round(c * (quien === 'a' ? ratioA() : 1 - ratioA()));
+    return r === quien ? c : 0;
+  }
+  function chipVence(st) {
+    if (st.saldo <= 0) return '<span class="pill ok">Pagada</span>';
+    if (st.dias == null) return st.pagadoMes ? '<span class="pill ok">Pagada este mes</span>' : '';
+    if (st.alDia) return `<span class="pill ok">Al día · próxima ${fechaCorta(st.proximo)}</span>`;
+    if (st.dias < 0) return `<span class="pill bad">Vencida hace ${-st.dias} día${st.dias === -1 ? '' : 's'}</span>`;
+    if (st.dias === 0) return '<span class="pill bad">Vence hoy</span>';
+    if (st.dias <= 5) return `<span class="pill warn">Vence en ${st.dias} día${st.dias === 1 ? '' : 's'}</span>`;
+    return `<span class="pill lila">Vence el ${fechaCorta(st.proximo)}</span>`;
+  }
+  const bancoDe = d => d.banco || d.entidad || '';
+  function filaPago(d, st, i) {
+    const falta = st.alDia ? Math.min(d.cuota || 0, st.saldo) : Math.max(0, st.cuotaMes - st.pagadoMes);
+    return `<div class="pago-row" style="--i:${i}">
+      <span class="ico" style="background:${st.dias != null && st.dias < 0 ? 'var(--bad)' : 'var(--lila)'}" aria-hidden="true">${ICON.card}</span>
+      <div class="t"><b>${esc(d.nombre)}</b><small>${esc(bancoDe(d) || TIPOS_DEUDA[d.tipo] || '')} · ${pesos(falta)}</small><div>${chipVence(st)}</div></div>
+      <button class="btn soft" data-act="pagarDeuda" data-id="${esc(d.id)}">Pagar</button></div>`;
+  }
+  function pagosPendientes(maxDias) {
+    return S.deudas.map(d => ({ d, st: estadoDeuda(d) }))
+      .filter(({ st }) => st.saldo > 0 && !st.alDia && st.dias != null && st.dias <= maxDias)
+      .sort((a, b) => a.st.dias - b.st.dias);
   }
   function estadoMeta(m) {
     const ap = S.aportes.filter(x => x.metaId === m.id);
@@ -277,6 +337,7 @@
     const clave = S.tab + S.mes;
     const nuevaVista = S._vista !== clave; S._vista = clave;
     app.innerHTML = cabecera() + `<div class="view${nuevaVista ? '' : ' quieta'}">${vistas[S.tab]()}</div>`;
+    programarRecordatorios();
     if (!nuevaVista) app.querySelector('.view').style.animation = 'none';
     contar();
   }
@@ -366,6 +427,8 @@
       </div>
     </section>
 
+    ${(() => { const pp = pagosPendientes(7); return pp.length && S.mes === mesDe(hoy()) ? `<section class="card"><h3>Pagos que se acercan <span class="sub">próximos 7 días</span></h3><div class="stagger" style="display:grid;gap:10px">${pp.map((x, i) => filaPago(x.d, x.st, i)).join('')}</div></section>` : ''; })()}
+
     <section class="card">
       <h3>¿A dónde va cada peso? <span class="sub">${c.ingresos ? Math.round(ahorroPct * 100) + '% ahorrado' : ''}</span></h3>
       ${partes.length ? `<div class="donut-wrap">
@@ -449,39 +512,67 @@
     const ds = S.deudas.map(d => ({ d, st: estadoDeuda(d) }));
     const activas = ds.filter(x => x.st.saldo > 0);
     const totalSaldo = sum(activas, x => x.st.saldo), totalCuota = sum(activas, x => x.d.cuota);
+    const parteA = sum(activas, x => parteCuota(x.d, 'a')), parteB = sum(activas, x => parteCuota(x.d, 'b'));
     const bola = [...activas].sort((a, b) => a.st.saldo - b.st.saldo)[0];
-    const aval = [...activas].filter(x => x.d.tasa).sort((a, b) => b.d.tasa - a.d.tasa)[0];
-    const mes = mesDe(hoy());
-    const tarjetas = ds.sort((a, b) => (b.st.saldo > 0) - (a.st.saldo > 0) || a.st.saldo - b.st.saldo).map(({ d, st }, i) => {
-      const pagadoMes = sum(st.pagos.filter(x => mesDe(x.fecha) === mes));
-      const meses = d.cuota ? Math.ceil(st.saldo / d.cuota) : null;
+    const aval = [...activas].filter(x => x.st.i > 0).sort((a, b) => b.st.i - a.st.i)[0];
+    const ultimaFin = activas.map(x => x.st.fin).filter(Boolean).sort().pop();
+    const proximos = activas.filter(x => x.st.dias != null).sort((a, b) => (a.st.alDia - b.st.alDia) || a.st.dias - b.st.dias);
+
+    const tarjetas = ds.sort((a, b) => (b.st.saldo > 0) - (a.st.saldo > 0) || (a.st.dias ?? 99) - (b.st.dias ?? 99)).map(({ d, st }, i) => {
       const resp = d.responsable || 'ambos';
+      const tipo = TIPOS_DEUDA[d.tipo] || 'Deuda';
+      let faltan = '—';
+      if (st.saldo <= 0) faltan = 'Nada';
+      else if (st.proy?.nunca) faltan = 'No termina';
+      else if (st.proy) faltan = mesesTxt(st.proy.meses);
+      let notas = '';
+      if (st.saldo > 0 && st.proy?.nunca) notas += `<div class="verdict bad" style="margin:0">La cuota no alcanza para los intereses: la deuda crece cada mes.<small>Necesitan pagar más de ${pesos(st.saldo * st.i)} al mes para que empiece a bajar.</small></div>`;
+      if (st.saldo > 0 && st.i > 0 && st.proy && !st.proy.nunca && st.proy.meses > 2) {
+        const extra = Math.max(20000, Math.round((d.cuota || 0) * .25 / 10000) * 10000);
+        const alt = simular(st.saldo, st.i, (d.cuota || 0) + extra);
+        if (alt && !alt.nunca && alt.meses < st.proy.meses) notas += `<div class="tip">${ICON.spark}<span>Si abonan ${pesos(extra)} más al mes, terminan <b>${mesesTxt(st.proy.meses - alt.meses)} antes</b> y se ahorran ${pesos(st.proy.intereses - alt.intereses)} en intereses.</span></div>`;
+      }
+      if (d.tipo === 'tarjeta' && d.cupo) {
+        const u = st.saldo / d.cupo;
+        notas += `<div class="bar-row"><div class="lbl"><span>Usan el ${Math.round(u * 100)}% del cupo de ${corto(d.cupo)}</span><span class="num muted">disponible ${corto(Math.max(0, d.cupo - st.saldo))}</span></div><div class="track"><div style="width:${Math.min(100, u * 100)}%;background:${u > .7 ? 'var(--bad)' : u > .3 ? 'var(--warn)' : 'var(--ok)'}"></div></div></div>`;
+      }
+      const conjunta = resp === 'ambos' && d.cuota && st.saldo > 0
+        ? `<div class="split" style="margin:0"><div class="who"><small><span class="dot a"></span>A ${esc(nom('a'))} le toca</small><b class="num">${pesos(parteCuota(d, 'a'))}</b><small>pagado en total ${corto(st.porA)}</small></div><div class="who"><small><span class="dot b"></span>A ${esc(nom('b'))} le toca</small><b class="num">${pesos(parteCuota(d, 'b'))}</b><small>pagado en total ${corto(st.porB)}</small></div></div>`
+        : `<div class="muted" style="font-size:13px"><span class="dot a"></span>${esc(nom('a'))} ha pagado ${pesos(st.porA)} · <span class="dot b"></span>${esc(nom('b'))} ${pesos(st.porB)}</div>`;
       return `<section class="card debt" style="--i:${i}">
-        <div class="head"><div><b>${esc(d.nombre)}</b><div class="muted" style="font-size:13px"><span class="dot ${esc(resp)}"></span>${esc(resp === 'ambos' ? 'De los dos' : 'De ' + nom(resp))}${d.entidad ? ' · ' + esc(d.entidad) : ''}${d.dia ? ' · paga el ' + esc(d.dia) : ''}</div>
-          ${st.saldo <= 0 ? '<span class="pill ok" style="margin-top:6px">¡Pagada!</span>' : bola && bola.d.id === d.id ? '<span class="pill lila" style="margin-top:6px">Siguiente a liquidar</span>' : ''}</div>
+        <div class="head"><div style="min-width:0">
+          <div class="eyebrow">${esc(tipo)}</div>
+          <b>${esc(d.nombre)}</b>
+          <div class="muted" style="font-size:13px">${bancoDe(d) ? esc(bancoDe(d)) + ' · ' : ''}<span class="dot ${esc(resp)}"></span>${esc(resp === 'ambos' ? 'Conjunta' : 'De ' + nom(resp))}${d.dia ? ' · paga el día ' + esc(d.dia) : ''}</div>
+          <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${chipVence(st)}${bola && bola.d.id === d.id && activas.length > 1 ? '<span class="pill lila">Liquidar primero</span>' : ''}</div></div>
           ${anillo(st.pct, Math.round(st.pct * 100) + '%')}</div>
         <div class="nums">
-          <div><small>Saldo</small><b>${corto(st.saldo)}</b></div>
-          <div><small>Cuota</small><b>${corto(d.cuota || 0)}</b></div>
-          <div><small>Faltan</small><b>${meses != null && st.saldo > 0 ? meses + ' mes' + (meses === 1 ? '' : 'es') : '—'}</b></div>
+          <div><small>Deben hoy</small><b>${corto(st.saldo)}</b></div>
+          <div><small>${d.tipo === 'tarjeta' ? 'Pago mínimo' : 'Cuota'}</small><b>${corto(d.cuota || 0)}</b></div>
+          <div><small>Faltan</small><b>${faltan}</b></div>
+          <div><small>Termina</small><b>${st.saldo <= 0 ? '¡Listo!' : st.fin ? esc(nombreMes(st.fin, { month: 'short', year: 'numeric' }).replace('.', '')) : '—'}</b></div>
+          <div><small>Intereses por pagar</small><b>${st.proy && !st.proy.nunca && st.i > 0 ? corto(st.proy.intereses) : st.i > 0 ? '∞' : '$0'}</b></div>
+          <div><small>${d.plazo ? 'Cuotas pagadas' : 'Tasa'}</small><b>${d.plazo ? Math.min(st.numCuota, d.plazo) + ' de ' + d.plazo : d.tasa ? esc(d.tasa) + '% ' + (d.tasaTipo === 'mv' ? 'M.V.' : 'E.A.') : 'Sin tasa'}</b></div>
         </div>
-        <div class="muted" style="font-size:13px"><span class="dot a"></span>${esc(nom('a'))} ha pagado ${pesos(st.porA)} · <span class="dot b"></span>${esc(nom('b'))} ${pesos(st.porB)}${pagadoMes ? ` · este mes ${pesos(pagadoMes)}` : ''}</div>
-        <div class="row">${st.saldo > 0 ? `<button class="btn" data-act="pagarDeuda" data-id="${esc(d.id)}">Registrar pago</button>` : ''}<button class="btn ghost" data-act="editarDeuda" data-id="${esc(d.id)}">Editar</button></div>
+        ${notas}${conjunta}
+        <div class="row">${st.saldo > 0 ? `<button class="btn" data-act="pagarDeuda" data-id="${esc(d.id)}">Registrar pago</button>` : ''}<button class="btn ghost" data-act="verDeuda" data-id="${esc(d.id)}">Pagos y saldo</button></div>
       </section>`;
     }).join('');
     return `
       <section class="hero">
-        <div class="eyebrow">Lo que deben entre todas las deudas</div>
+        <div class="eyebrow">Lo que deben hoy entre todas las deudas</div>
         <div class="big num" data-num="${Math.round(totalSaldo)}" data-k="deuda">${pesos(totalSaldo)}</div>
+        <div class="nota">${activas.length ? (ultimaFin ? `Si siguen pagando las cuotas, quedan libres de deudas en ${esc(nombreMes(ultimaFin))}.` : 'Agreguen la cuota de cada deuda para calcular cuándo terminan.') : 'Sin deudas activas.'}</div>
         <div class="stats">
           <div class="stat"><span>Cuotas al mes</span><b class="num">${corto(totalCuota)}</b></div>
-          <div class="stat"><span>Deudas activas</span><b>${activas.length}</b></div>
-          <div class="stat"><span>Ya pagado</span><b class="num">${corto(sum(ds, x => x.st.pagado))}</b></div>
+          <div class="stat"><span>Le toca a ${esc(nom('a'))}</span><b class="num">${corto(parteA)}</b></div>
+          <div class="stat"><span>Le toca a ${esc(nom('b'))}</span><b class="num">${corto(parteB)}</b></div>
         </div>
       </section>
-      ${activas.length > 1 ? `<section class="card idea"><span class="ico">${ICON.snow}</span><div><b>Estrategia sugerida</b><p>${aval && aval.d.tasa >= 20 ? `Abonen extra primero a <b style="display:inline;font:inherit;font-weight:700">${esc(aval.d.nombre)}</b>: tiene la tasa más alta (${aval.d.tasa}% anual) y es la que más intereses les cobra.` : `Método bola de nieve: paguen el mínimo en todas y abonen todo lo extra a <b style="display:inline;font:inherit;font-weight:700">${esc(bola.d.nombre)}</b>, la más pequeña. Cuando la terminen, esa cuota pasa a la siguiente.`}</p></div></section>` : ''}
-      <div class="stagger" style="display:grid;gap:14px">${tarjetas || `<section class="card">${vacio('Sin deudas registradas', 'Agreguen tarjetas, créditos o préstamos para ver quién paga qué y cuándo terminan.')}</section>`}</div>
-      <button class="btn soft full" data-act="nuevaDeuda">Agregar una deuda</button>`;
+      ${proximos.length ? `<section class="card"><h3>Calendario de pagos <span class="sub">${esc(nombreMes(mesDe(hoy()), { month: 'long' }))}</span></h3><div class="stagger" style="display:grid;gap:10px">${proximos.map((x, i) => filaPago(x.d, x.st, i)).join('')}</div></section>` : ''}
+      ${activas.length > 1 ? `<section class="card idea"><span class="ico">${ICON.snow}</span><div><b>Estrategia sugerida</b><p>${aval && aval.d.tasa && (aval.d.tasaTipo === 'mv' ? aval.d.tasa * 12 : aval.d.tasa) >= 20 ? `Abonen lo extra primero a «${esc(aval.d.nombre)}»: tiene la tasa más alta y es la que más intereses les cobra. En las demás paguen solo la cuota.` : `Método bola de nieve: paguen la cuota de todas y abonen lo extra a «${esc(bola.d.nombre)}», la más pequeña. Cuando la terminen, esa cuota se suma a la siguiente.`}</p></div></section>` : ''}
+      <div class="stagger" style="display:grid;gap:14px">${tarjetas || `<section class="card">${vacio('Sin deudas registradas', 'Agreguen tarjetas, créditos o préstamos: banco, cuota, día de pago y si es de uno o de los dos.')}</section>`}</div>
+      <button class="btn soft full" data-act="nuevaDeuda">Agregar una deuda o tarjeta</button>`;
   }
 
   const PLANES = [
@@ -627,30 +718,76 @@
   }
 
   function formDeuda(d = {}) {
+    const tipo = d.tipo || 'tarjeta';
+    const st = d.id ? estadoDeuda(d) : null;
+    const resp = d.responsable || 'ambos';
     return `<h2>${d.id ? 'Editar deuda' : 'Nueva deuda'}</h2>
       <form data-form="deuda" data-id="${esc(d.id || '')}">
-        <div class="field"><label for="dnombre">Nombre</label><input id="dnombre" name="dnombre" class="input" maxlength="40" required value="${esc(d.nombre || '')}" placeholder="Ej: Tarjeta de crédito" autofocus></div>
-        <div class="field"><label for="dentidad">Banco o entidad (opcional)</label><input id="dentidad" name="dentidad" class="input" maxlength="40" value="${esc(d.entidad || '')}"></div>
-        <div class="row"><div class="field"><label for="dsaldo">Saldo total</label>${dinero('dsaldo', d.saldoInicial, 'required')}</div>
-          <div class="field"><label for="dcuota">Cuota mensual</label>${dinero('dcuota', d.cuota)}</div></div>
-        <div class="row"><div class="field"><label for="dtasa">Tasa anual % (opcional)</label><input id="dtasa" name="dtasa" class="input" inputmode="decimal" value="${esc(d.tasa || '')}" placeholder="Ej: 28"></div>
-          <div class="field"><label for="ddia">Día de pago</label><input id="ddia" name="ddia" class="input" inputmode="numeric" maxlength="2" value="${esc(d.dia || '')}" placeholder="Ej: 15"></div></div>
-        <div class="field"><span class="lab">¿De quién es la deuda?</span>${seg('dresp', [['ambos', 'De los dos'], ['a', nom('a')], ['b', nom('b')]], d.responsable || 'ambos')}</div>
+        <div class="field"><label for="dtipo">Tipo</label><select id="dtipo" name="dtipo" class="input">${Object.entries(TIPOS_DEUDA).map(([k, n]) => `<option value="${k}" ${k === tipo ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
+        <div class="field"><label for="dnombre">Nombre para reconocerla</label><input id="dnombre" name="dnombre" class="input" maxlength="40" required value="${esc(d.nombre || '')}" placeholder="Ej: Visa Oro, Crédito del carro"></div>
+        <div class="field"><label for="dbanco">Banco o a quién se le debe</label><input id="dbanco" name="dbanco" class="input" maxlength="40" list="listaBancos" value="${esc(bancoDe(d))}" placeholder="Escribe o elige"><datalist id="listaBancos">${BANCOS.map(b => `<option value="${esc(b)}"></option>`).join('')}</datalist></div>
+        <div class="row"><div class="field"><label for="dsaldo">${d.id ? 'Lo que deben hoy' : 'Saldo que deben hoy'}</label>${dinero('dsaldo', st ? st.saldo : d.saldoInicial, 'required')}</div>
+          <div class="field" id="campoCupo" ${tipo === 'tarjeta' ? '' : 'hidden'}><label for="dcupo">Cupo total</label>${dinero('dcupo', d.cupo)}</div></div>
+        <div class="row"><div class="field"><label for="dcuota" id="lblCuota">${tipo === 'tarjeta' ? 'Pago mínimo o lo que pagan al mes' : 'Cuota mensual'}</label>${dinero('dcuota', d.cuota)}</div>
+          <div class="field"><label for="ddia">Día de pago</label><input id="ddia" name="ddia" class="input" inputmode="numeric" maxlength="2" value="${esc(d.dia || '')}" placeholder="1 a 31"></div></div>
+        <div class="field"><label for="dtasa">Tasa de interés (opcional)</label>
+          <div class="row" style="align-items:center"><input id="dtasa" name="dtasa" class="input" inputmode="decimal" value="${esc(d.tasa || '')}" placeholder="Ej: 28,5">${seg('dtasatipo', [['ea', 'E.A.'], ['mv', 'Mensual']], d.tasaTipo || 'ea')}</div>
+          <small class="muted">Aparece en el extracto. Con ella calculamos los intereses de cada cuota y la fecha real de terminación.</small></div>
+        <div class="row" id="campoPlazo" ${tipo === 'tarjeta' ? 'hidden' : ''}><div class="field"><label for="dplazo">Total de cuotas (opcional)</label><input id="dplazo" name="dplazo" class="input" inputmode="numeric" maxlength="3" value="${esc(d.plazo || '')}" placeholder="Ej: 36"></div>
+          <div class="field"><label for="dprev">Cuotas ya pagadas antes</label><input id="dprev" name="dprev" class="input" inputmode="numeric" maxlength="3" value="${esc(d.cuotasPrevias || '')}" placeholder="Ej: 10"></div></div>
+        <div class="field"><span class="lab">¿De quién es la deuda?</span>${seg('dresp', [['ambos', 'Conjunta'], ['a', nom('a')], ['b', nom('b')]], resp)}
+          <small class="muted" id="notaConjunta" ${resp === 'ambos' ? '' : 'hidden'}>La cuota se reparte como en Ajustes: ${esc(nom('a'))} ${Math.round(ratioA() * 100)}% y ${esc(nom('b'))} ${Math.round((1 - ratioA()) * 100)}%. Quien pague de más queda a favor en «Cuentas claras».</small></div>
         <button class="btn full">Guardar deuda</button>
         ${d.id ? `<div id="borrarZona"><button type="button" class="btn danger full" data-act="pedirBorrar" data-col="deudas" data-id="${esc(d.id)}">Eliminar deuda</button></div>` : ''}
       </form>`;
   }
   function formPagoDeuda(d) {
     const st = estadoDeuda(d);
-    const sugerido = Math.min(d.cuota || st.saldo, st.saldo);
+    const sugerido = Math.max(0, Math.min(st.saldo, (st.cuotaMes - st.pagadoMes) || d.cuota || st.saldo));
+    const interes = Math.round(st.saldo * st.i);
     return `<h2>Pago de ${esc(d.nombre)}</h2>
-      <p class="muted" style="margin-top:-6px">Saldo actual ${pesos(st.saldo)}. Abonar extra acorta la deuda.</p>
-      <form data-form="pagoDeuda" data-id="${esc(d.id)}">
-        <div class="field"><label for="pmontoD">Valor pagado</label>${dinero('pmontoD', sugerido, 'required autofocus')}</div>
+      <p class="muted" style="margin-top:-6px">${bancoDe(d) ? esc(bancoDe(d)) + ' · ' : ''}Deben hoy ${pesos(st.saldo)}${st.proximo ? ' · vence el ' + esc(fechaCorta(st.proximo)) : ''}</p>
+      <form data-form="pagoDeuda" data-id="${esc(d.id)}" data-i="${st.i}" data-saldo="${st.saldo}">
+        <div class="field"><span class="lab">¿Qué están pagando?</span>${seg('ptipo', [['cuota', d.tipo === 'tarjeta' ? 'Pago del mes' : 'Cuota del mes'], ['abono', 'Abono extra a capital']], 'cuota')}</div>
+        <div class="field"><label for="pmontoD">Valor pagado</label>${dinero('pmontoD', sugerido, 'required')}</div>
+        <div class="field" id="campoInt" ${st.i > 0 ? '' : 'hidden'}><label for="pint">De ese valor, intereses</label>${dinero('pint', interes)}
+          <small class="muted">Calculado con la tasa. Si el extracto dice otra cifra, cámbiala.</small></div>
+        <div class="resumen-pago" id="resumenPago"></div>
         <div class="field"><span class="lab">¿Quién pagó?</span>${seg('ppago', quienes(), yo())}</div>
         <div class="field"><label for="pfecha">Fecha</label><input id="pfecha" name="pfecha" type="date" class="input" value="${hoy()}" required></div>
         <button class="btn full">Registrar pago</button>
       </form>`;
+  }
+  function resumenPago(f) {
+    const box = f.querySelector('#resumenPago'); if (!box) return;
+    const monto = digitos(f.elements.pmontoD.value);
+    const abono = f.elements.ptipo.value === 'abono';
+    const interes = abono || f.querySelector('#campoInt').hidden ? 0 : Math.min(monto, digitos(f.elements.pint.value));
+    const capital = Math.max(0, monto - interes);
+    const saldo = Number(f.dataset.saldo), nuevo = Math.max(0, saldo - capital);
+    box.innerHTML = `<div><span>Abono a la deuda</span><b class="num">${pesos(capital)}</b></div><div><span>Quedarán debiendo</span><b class="num">${pesos(nuevo)}</b></div>`;
+  }
+  function vistaDeuda(d) {
+    const st = estadoDeuda(d);
+    const lista = [...st.pagos].reverse();
+    return `<h2>${esc(d.nombre)}</h2>
+      <p class="muted" style="margin-top:-6px">${esc(TIPOS_DEUDA[d.tipo] || 'Deuda')}${bancoDe(d) ? ' · ' + esc(bancoDe(d)) : ''}</p>
+      <div class="nums-sheet">
+        <div><small>Deben hoy</small><b class="num">${pesos(st.saldo)}</b></div>
+        <div><small>Pagado en total</small><b class="num">${pesos(st.pagado)}</b></div>
+        <div><small>Intereses pagados</small><b class="num">${pesos(st.intereses)}</b></div>
+        <div><small>${st.fin ? 'Terminan en' : 'Faltan'}</small><b>${st.saldo <= 0 ? '¡Pagada!' : st.fin ? esc(nombreMes(st.fin)) : st.proy?.nunca ? 'No baja' : '—'}</b></div>
+      </div>
+      <form data-form="saldoReal" data-id="${esc(d.id)}" style="margin-top:14px">
+        <div class="field"><label for="sreal">¿El banco dice otro saldo? Actualízalo con el extracto</label>
+          <div class="row"><input id="sreal" name="sreal" class="input money" style="font-size:18px;flex:2;min-width:0" inputmode="numeric" placeholder="${esc(pesos(st.saldo))}" required><button class="btn soft" style="flex:1">Actualizar</button></div></div>
+      </form>
+      <h3 style="font:700 16px var(--f-display);margin:18px 0 8px">Historial de pagos</h3>
+      <div class="list">${lista.map((x, i) => `<button class="item" style="--i:${i}" data-act="editarGasto" data-id="${esc(x.id)}">
+        <span class="ico" style="background:var(--${x.pagadoPor === 'b' ? 'malva' : 'lila'})">${esc(ini(x.pagadoPor))}</span>
+        <span class="t"><b>${x.abono ? 'Abono a capital' : 'Pago'} · ${esc(nombreDia(x.fecha))}</b><small>${esc(nom(x.pagadoPor))}${x.interes ? ' · interés ' + pesos(x.interes) + ' · capital ' + pesos(x.capital ?? x.monto) : ''}</small></span>
+        <span class="m">${pesos(x.monto)}</span></button>`).join('') || '<p class="muted">Aún no hay pagos registrados.</p>'}</div>
+      <div class="row" style="margin-top:14px"><button class="btn ghost" data-act="editarDeuda" data-id="${esc(d.id)}">Editar datos</button>${st.saldo > 0 ? `<button class="btn" data-act="pagarDeuda" data-id="${esc(d.id)}">Registrar pago</button>` : ''}</div>`;
   }
   function formMeta(m = {}) {
     return `<h2>${m.id ? 'Editar meta' : 'Nueva meta'}</h2>
@@ -694,6 +831,7 @@
         <div class="field"><span class="lab">¿Cómo reparten los gastos compartidos?</span>${seg('reparto', [['proporcional', 'Según ingresos'], ['mitad', 'Mitad y mitad'], ['custom', 'Personalizado']], c.reparto)}</div>
         <div class="field" id="campoPct" ${c.reparto === 'custom' ? '' : 'hidden'}><label for="pcta">% que pone la persona 1</label><input id="pcta" name="pcta" class="input" inputmode="numeric" value="${esc(c.pctA)}"></div>
         <div class="field"><label for="meta">Meta de ahorro mensual (% de los ingresos)</label><input id="meta" name="meta" class="input" inputmode="numeric" value="${esc(c.metaAhorroPct)}"></div>
+        ${inicial ? '' : `<label class="check" for="rec"><input type="checkbox" id="rec" name="rec" ${c.recordatorios === false ? '' : 'checked'}><span>Avisarme en el celular el día antes y el día que vence cada deuda</span></label>`}
         ${inicial ? '' : `<div class="field"><span class="lab">Presupuesto mensual por categoría</span>
           <button type="button" class="btn soft" data-act="sugerir">${ICON.spark} Sugerir con la regla 50/30/20</button>
           <div style="display:grid;gap:8px">${CATS.filter(k => k.id !== 'deudas').map(k => `<div style="display:grid;grid-template-columns:1fr 140px;gap:10px;align-items:center"><label for="p_${k.id}" style="font-size:14px;font-weight:600"><span class="dot" style="background:${k.c}"></span>${esc(k.n)}</label><input id="p_${k.id}" name="p_${k.id}" class="input money" style="font-size:16px;padding:9px 12px" inputmode="numeric" value="${p[k.id] ? pesos(p[k.id]) : ''}" placeholder="Sin tope"></div>`).join('')}</div></div>`}
@@ -791,10 +929,11 @@
       case 'elegirMeta': abrir(`<h2>¿A qué meta aportan?</h2><div class="menu">${S.metas.map((m, i) => `<button style="--i:${i}" data-act="aportar" data-id="${esc(m.id)}"><span class="ico" style="background:var(--ok)">${ICON.piggy}</span><span><b>${esc(m.nombre)}</b><small>${Math.round(estadoMeta(m).pct * 100)}% logrado</small></span></button>`).join('') || '<p class="muted">Aún no hay metas. Créenlas en Planes.</p>'}</div>`); break;
       case 'editarGasto': { const g = S.gastos.find(x => x.id === id); if (g) abrir(formGasto(g)); break; }
       case 'editarDeuda': { const d = S.deudas.find(x => x.id === id); if (d) abrir(formDeuda(d)); break; }
-      case 'pagarDeuda': { const d = S.deudas.find(x => x.id === id); if (d) abrir(formPagoDeuda(d)); break; }
+      case 'pagarDeuda': { const d = S.deudas.find(x => x.id === id); if (d) { abrir(formPagoDeuda(d)); resumenPago($('form[data-form=pagoDeuda]')); } break; }
       case 'editarMeta': { const m = S.metas.find(x => x.id === id); if (m) abrir(formMeta(m)); break; }
       case 'aportar': { const m = S.metas.find(x => x.id === id); if (m) abrir(formAporte(m)); break; }
       case 'editarIngreso': { const x = S.ingresos.find(y => y.id === id); if (x) abrir(formIngreso(x)); break; }
+      case 'verDeuda': { const d = S.deudas.find(x => x.id === id); if (d) abrir(vistaDeuda(d)); break; }
       case 'pedirBorrar': $('#borrarZona').innerHTML = borrarConfirm(t.dataset.col, id); break;
       case 'cancelBorrar': $('#borrarZona').innerHTML = `<button type="button" class="btn danger full" data-act="pedirBorrar" data-col="${esc(t.dataset.col)}" data-id="${esc(id)}">Eliminar</button>`; break;
       case 'borrar':
@@ -861,9 +1000,14 @@
     const el = e.target;
     if (el.classList.contains('money')) { const n = digitos(el.value); el.value = n ? pesos(n) : ''; }
     if (el.name === 'gcat') { const c = $('#campoDeuda'); if (c) c.hidden = el.value !== 'deudas'; }
+    if (el.form?.dataset.form === 'pagoDeuda') resumenPago(el.form);
   });
   document.addEventListener('change', e => {
     if (e.target.name === 'reparto') { const c = $('#campoPct'); if (c) c.hidden = e.target.value !== 'custom'; }
+    if (e.target.name === 'dtipo') { const t = e.target.value === 'tarjeta'; $('#campoCupo').hidden = !t; $('#campoPlazo').hidden = t; $('#lblCuota').textContent = t ? 'Pago mínimo o lo que pagan al mes' : 'Cuota mensual'; }
+    if (e.target.name === 'dresp') { const n = $('#notaConjunta'); if (n) n.hidden = e.target.value !== 'ambos'; }
+    if (e.target.name === 'ptipo') { const c = $('#campoInt'), f = e.target.form; if (c) c.hidden = e.target.value === 'abono' || Number(f.dataset.i) === 0; }
+    if (e.target.form?.dataset.form === 'pagoDeuda') resumenPago(e.target.form);
     if (e.target.name === 'gcat') { const c = $('#campoDeuda'); if (c) c.hidden = e.target.value !== 'deudas'; }
   });
 
@@ -885,24 +1029,52 @@
           deudaId: cat === 'deudas' ? (v('gdeuda') || null) : null, creado: prev?.creado || Date.now() };
         if (data.tipo === 'compartido') data.ratioA = prev?.tipo === 'compartido' && typeof prev.ratioA === 'number' ? prev.ratioA : ratioA();
         const its = prev?.items || leerItemsDeForm(f); if (its?.length) data.items = its.slice(0, 40);
+        if (data.deudaId) {
+          const interes = prev && prev.deudaId === data.deudaId ? Math.min(monto, prev.interes || 0) : 0;
+          data.interes = interes; data.capital = monto - interes; data.abono = !!prev?.abono;
+        }
         await Store.poner('gastos', id, data);
         vibrar(); cerrar(); toast(id ? 'Gasto actualizado' : 'Gasto guardado');
         if (data.deudaId && estadoDeuda(S.deudas.find(d => d.id === data.deudaId) || {}).saldo === 0) confeti();
       } else if (tipo === 'deuda') {
         const tasa = Number(String(v('dtasa')).replace(',', '.'));
         const dia = Math.round(Number(v('ddia')));
-        const data = { nombre: v('dnombre').trim().slice(0, 40), entidad: v('dentidad').trim().slice(0, 40), saldoInicial: digitos(v('dsaldo')), cuota: digitos(v('dcuota')),
-          tasa: tasa > 0 && tasa < 500 ? tasa : null, dia: dia >= 1 && dia <= 31 ? dia : null, responsable: ['a', 'b'].includes(v('dresp')) ? v('dresp') : 'ambos' };
-        if (!data.nombre || !data.saldoInicial) { toast('Pon nombre y saldo'); return; }
+        const prev = id ? S.deudas.find(x => x.id === id) : null;
+        const saldoForm = digitos(v('dsaldo'));
+        const tipoD = TIPOS_DEUDA[v('dtipo')] ? v('dtipo') : 'otro';
+        const plazo = Math.round(Number(v('dplazo'))), previas = Math.round(Number(v('dprev')));
+        const data = { tipo: tipoD, nombre: v('dnombre').trim().slice(0, 40), banco: v('dbanco').trim().slice(0, 40), cuota: digitos(v('dcuota')),
+          cupo: tipoD === 'tarjeta' ? (digitos(v('dcupo')) || null) : null,
+          tasa: tasa > 0 && tasa < 500 ? tasa : null, tasaTipo: v('dtasatipo') === 'mv' ? 'mv' : 'ea', dia: dia >= 1 && dia <= 31 ? dia : null,
+          plazo: tipoD !== 'tarjeta' && plazo > 0 && plazo < 600 ? plazo : null, cuotasPrevias: tipoD !== 'tarjeta' && previas > 0 && previas < 600 ? previas : null,
+          responsable: ['a', 'b'].includes(v('dresp')) ? v('dresp') : 'ambos',
+          saldoInicial: prev ? prev.saldoInicial : saldoForm, creado: prev?.creado || Date.now() };
+        if (!data.nombre || !saldoForm) { toast('Pon nombre y saldo'); return; }
+        if (prev) {
+          data.saldoActual = prev.saldoActual ?? null; data.saldoActualizado = prev.saldoActualizado ?? null;
+          if (saldoForm !== estadoDeuda(prev).saldo) { data.saldoActual = saldoForm; data.saldoActualizado = Date.now(); }
+          if (saldoForm > (prev.saldoInicial || 0)) data.saldoInicial = saldoForm;
+        }
         await Store.poner('deudas', id, data); vibrar(); cerrar(); toast('Deuda guardada');
+      } else if (tipo === 'saldoReal') {
+        const d = S.deudas.find(x => x.id === id); const n = digitos(v('sreal'));
+        if (!d || !v('sreal').trim()) { toast('Escribe el saldo del extracto'); return; }
+        const data = { ...d }; delete data.id;
+        data.saldoActual = n; data.saldoActualizado = Date.now(); if (n > (d.saldoInicial || 0)) data.saldoInicial = n;
+        await Store.poner('deudas', id, data); vibrar(); cerrar(); toast('Saldo actualizado');
       } else if (tipo === 'pagoDeuda') {
         const d = S.deudas.find(x => x.id === id); const monto = digitos(v('pmontoD'));
         if (!d || !monto) { toast('Escribe el valor'); return; }
-        await Store.poner('gastos', null, { desc: 'Pago ' + d.nombre, monto, fecha: v('pfecha') || hoy(), categoria: 'deudas', deudaId: d.id,
+        const abono = v('ptipo') === 'abono';
+        const interes = abono || tasaMensual(d) === 0 ? 0 : Math.min(monto, digitos(v('pint')));
+        const data = { desc: (abono ? 'Abono ' : 'Pago ') + d.nombre, monto, interes, capital: monto - interes, abono, fecha: v('pfecha') || hoy(), categoria: 'deudas', deudaId: d.id,
           pagadoPor: v('ppago') === 'b' ? 'b' : 'a', tipo: d.responsable === 'a' || d.responsable === 'b' ? d.responsable : 'compartido',
-          ratioA: ratioA(), creado: Date.now() });
+          ratioA: ratioA(), creado: Date.now() };
+        await Store.poner('gastos', null, data);
         vibrar(); cerrar();
-        if (estadoDeuda(d).saldo <= 0) { confeti(); toast('¡Deuda pagada por completo!'); } else toast('Pago registrado');
+        const st = estadoDeuda(d);
+        if (st.saldo <= 0) { confeti(); toast('¡Deuda pagada por completo!'); }
+        else toast(`Pago registrado. Quedan ${pesos(st.saldo)}`);
       } else if (tipo === 'meta') {
         const data = { nombre: v('mnombre').trim().slice(0, 40), objetivo: digitos(v('mobj')), fechaLimite: v('mfecha') || null };
         if (!data.nombre || !data.objetivo) { toast('Pon nombre y valor'); return; }
@@ -922,6 +1094,7 @@
         c.reparto = ['proporcional', 'mitad', 'custom'].includes(v('reparto')) ? v('reparto') : 'proporcional';
         c.pctA = Math.min(100, Math.max(0, Number(v('pcta')) || 50));
         c.metaAhorroPct = Math.min(90, Math.max(0, Number(v('meta')) || 0));
+        if (!f.dataset.inicial) c.recordatorios = !!f.elements.rec?.checked;
         if (!f.dataset.inicial) { const p = {}; for (const k of CATS) { const n = digitos(v('p_' + k.id)); if (n) p[k.id] = n; } c.presupuestos = p; }
         if (!c.nombres.a || !c.nombres.b) { toast('Escriban los dos nombres'); return; }
         await Store.guardarCfg(c); vibrar(); cerrar();
@@ -948,6 +1121,34 @@
   function leerItemsDeForm(f) {
     const box = f.querySelector('.items'); if (!box) return null;
     return [...box.children].map(d => ({ descripcion: d.children[0].textContent, valor: digitos(d.children[1].textContent) }));
+  }
+
+  // Recordatorios de pago en el celular (un día antes y el mismo día)
+  let recFirma = '', recT;
+  function programarRecordatorios() {
+    const LN = plugin('LocalNotifications'); if (!nativo || !LN || !S.cfg) return;
+    const activas = S.deudas.filter(d => d.dia && estadoDeuda(d).saldo > 0).slice(0, 100);
+    const firma = (S.cfg.recordatorios === false ? 'off' : 'on') + JSON.stringify(activas.map(d => [d.id, d.dia, d.nombre, d.cuota, bancoDe(d)]));
+    if (firma === recFirma) return; recFirma = firma;
+    clearTimeout(recT);
+    recT = setTimeout(async () => {
+      try {
+        const pend = await LN.getPending();
+        const viejas = (pend.notifications || []).filter(n => n.id >= 7000 && n.id < 7400);
+        if (viejas.length) await LN.cancel({ notifications: viejas.map(n => ({ id: n.id })) });
+        if (S.cfg.recordatorios === false || !activas.length) return;
+        let perm = await LN.checkPermissions();
+        if (perm.display !== 'granted') perm = await LN.requestPermissions();
+        if (perm.display !== 'granted') return;
+        const nots = [];
+        activas.forEach((d, k) => {
+          const cuerpo = `${bancoDe(d) ? bancoDe(d) + ' · ' : ''}${d.cuota ? 'Cuota de ' + pesos(d.cuota) + '. ' : ''}Cuando paguen, regístrenlo en TU Y YO.`;
+          if (d.dia > 1) nots.push({ id: 7000 + k * 2, title: `Se acerca el pago de ${d.nombre}`, body: `Vence el día ${d.dia}. ${cuerpo}`, schedule: { on: { day: Math.min(d.dia - 1, 28), hour: 19, minute: 0 }, allowWhileIdle: true } });
+          if (d.dia <= 28) nots.push({ id: 7001 + k * 2, title: `Hoy vence ${d.nombre}`, body: cuerpo, schedule: { on: { day: d.dia, hour: 8, minute: 0 }, allowWhileIdle: true } });
+        });
+        if (nots.length) await LN.schedule({ notifications: nots });
+      } catch (err) { console.error('recordatorios', err); recFirma = ''; }
+    }, 1500);
   }
 
   // Botón atrás de Android

@@ -13,7 +13,12 @@ Cada vez que se sube un cambio a `main`, GitHub Actions compila una APK nueva y 
 - **Inicio**: cuánto les queda libre este mes (ya descontando la meta de ahorro y las cuotas pendientes), a dónde va cada peso, quién le debe a quién y cuánto pagó cada uno, termómetro de diversión, presupuesto por categoría y los últimos 6 meses.
 - **Escanear factura**: toma la foto y la app lee comercio, fecha, total, productos y adivina la categoría. Solo revisas y guardas. La lectura ocurre en el celular (la primera vez descarga el idioma español, necesita internet).
 - **Gastos**: cada gasto dice quién pagó y de quién es (de los dos o de uno). Los compartidos se reparten según ingresos, mitad y mitad o un porcentaje propio.
-- **Deudas**: saldo, cuota, meses que faltan, cuánto ha pagado cada uno y qué deuda conviene liquidar primero (bola de nieve o tasa más alta).
+- **Deudas y tarjetas**: tipo (tarjeta, libre inversión, vehículo, vivienda, educativo, préstamo), banco o a quién se le debe, día de pago, cupo de la tarjeta, tasa (E.A. o mensual), plazo y cuotas pagadas.
+  - Al registrar un pago, la app separa intereses y abono a capital, descuenta el saldo y muestra cuánto quedan debiendo.
+  - Para cada deuda: lo que deben hoy, cuántos meses faltan, en qué mes terminan, intereses que faltan por pagar y cuánto se ahorran si abonan un poco más.
+  - Calendario de pagos con estado (al día, vence en X días, vencida) y recordatorio en el celular el día antes y el día del pago.
+  - Deudas conjuntas: dice cuánto le toca a cada uno de la cuota y quién ha pagado; si uno paga de más, queda a su favor en "Cuentas claras".
+  - Botón para corregir el saldo con el extracto del banco y el historial de pagos de cada deuda.
 - **Planes**: "¿Nos lo podemos permitir?", planes de diversión según lo que les queda, consejos de ahorro y metas con fecha estimada.
 
 ## Compartir entre los dos celulares (Firebase gratis)
