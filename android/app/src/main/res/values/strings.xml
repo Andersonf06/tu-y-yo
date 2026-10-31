@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TU Y YO</string>
+    <string name="title_activity_main">TU Y YO</string>
+    <string name="package_name">com.tuyyo.presupuesto</string>
+    <string name="custom_url_scheme">com.tuyyo.presupuesto</string>
+</resources>

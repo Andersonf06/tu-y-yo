@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function members(hid) { return get(/databases/$(database)/documents/hogares/$(hid)).data.members; }
+    function isMember(hid) { return signedIn() && request.auth.uid in members(hid); }
+
+    match /hogares/{hid} {
+      // Solo los miembros leen el hogar (incluye el token de invitación).
+      allow get: if signedIn() && request.auth.uid in resource.data.members;
+      allow list: if false;
+
+      // Crear: solo uno mismo como único miembro, con token de 36 caracteres.
+      allow create: if signedIn()
+        && request.resource.data.members == [request.auth.uid]
+        && request.resource.data.joinToken is string
+        && request.resource.data.joinToken.size() == 36;
+
+      // Miembros: pueden cambiar la configuración, pero no la lista de miembros ni el token.
+      allow update: if (signedIn() && request.auth.uid in resource.data.members
+          && request.resource.data.members == resource.data.members
+          && request.resource.data.joinToken == resource.data.joinToken)
+        // Unirse: quien conoce el token se agrega a sí mismo, máximo 2 personas.
+        || (signedIn()
+          && resource.data.members.size() < 2
+          && !(request.auth.uid in resource.data.members)
+          && request.resource.data.joinProof == resource.data.joinToken
+          && request.resource.data.members == resource.data.members.concat([request.auth.uid])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'joinProof']));
+
+      allow delete: if false;
+
+      // Datos del hogar: solo miembros, solo colecciones conocidas, documentos pequeños.
+      match /{col}/{docId} {
+        allow read: if col in ['gastos', 'deudas', 'metas', 'aportes', 'ingresos'] && isMember(hid);
+        allow delete: if col in ['gastos', 'deudas', 'metas', 'aportes', 'ingresos'] && isMember(hid);
+        allow create, update: if col in ['gastos', 'deudas', 'metas', 'aportes', 'ingresos']
+          && isMember(hid)
+          && request.resource.data.keys().size() <= 20
+          && (!('monto' in request.resource.data) || (request.resource.data.monto is number && request.resource.data.monto >= 0 && request.resource.data.monto < 10000000000));
+      }
+    }
+
+    // Todo lo demás está cerrado.
+    match /{document=**} { allow read, write: if false; }
+  }
+}

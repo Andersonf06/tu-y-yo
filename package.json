@@ -1,0 +1,21 @@
+{
+  "name": "tu-y-yo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TU Y YO: presupuesto en pareja",
+  "scripts": {
+    "sync": "cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "7.4.4",
+    "@capacitor/app": "7.1.0",
+    "@capacitor/camera": "7.0.2",
+    "@capacitor/core": "7.4.4",
+    "@capacitor/haptics": "7.0.2",
+    "@capacitor/share": "7.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "3.0.5",
+    "@capacitor/cli": "7.4.4"
+  }
+}

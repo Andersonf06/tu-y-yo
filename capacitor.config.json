@@ -1,0 +1,7 @@
+{
+  "appId": "com.tuyyo.presupuesto",
+  "appName": "TU Y YO",
+  "webDir": "www",
+  "backgroundColor": "#F5F0FC",
+  "android": { "allowMixedContent": false }
+}
