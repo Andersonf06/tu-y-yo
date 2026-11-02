@@ -61,3 +61,7 @@ cd android && ./gradlew assembleDebug
 ```
 
 El código de la app está en `www/` (HTML, CSS y JavaScript sin compilar). Ver también [SEGURIDAD.md](SEGURIDAD.md).
+
+## Logo
+
+Los archivos están en [`logo/`](logo): `icono.svg` (ícono completo), `simbolo.svg` (solo el símbolo), `simbolo-lila.svg` (versión de un color) y los PNG en 512 y 1024 px. El símbolo es una «Y» formada por dos personas que se unen en un mismo camino, con un techo verde: el hogar que construyen juntos.

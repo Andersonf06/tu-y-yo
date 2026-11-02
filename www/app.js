@@ -50,6 +50,7 @@
   const NECESIDADES = ['mercado', 'hogar', 'transporte', 'salud', 'educacion', 'mascotas'];
   const COLS = ['gastos', 'deudas', 'metas', 'aportes', 'ingresos', 'fijos', 'cuentas', 'citas'];
 
+  const LOGO = (cls = '') => `<span class="logo-tile ${cls}" aria-hidden="true"><svg viewBox="0 0 100 100"><g transform="translate(0 6)"><path d="M25 7.5 L50 -3 L75 7.5" fill="none" stroke="#5EE6A8" class="techo" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M29 42 C29 57 40 63 50 69" fill="none" stroke="#FFFFFF" stroke-width="12.5" stroke-linecap="round"/><path d="M71 42 C71 57 60 63 50 69" fill="none" stroke="#FFD3E8" stroke-width="12.5" stroke-linecap="round"/><path d="M50 69 V85" fill="none" stroke="#5EE6A8" stroke-width="12.5" stroke-linecap="round"/><circle class="cabeza a" cx="29" cy="23.5" r="10.5" fill="#FFFFFF"/><circle class="cabeza b" cx="71" cy="23.5" r="10.5" fill="#FFD3E8"/></g></svg></span>`;
   const ICON = {
     heart: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.3-9.2C1.4 8.4 3.6 5 7 5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.4 0 5.6 3.4 4.3 6.8C19.5 16.4 12 21 12 21z"/></svg>',
     gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
@@ -443,7 +444,7 @@
   }
   function cabecera() {
     return `<header class="top">
-      <div class="brand">TU <span class="y">y</span> YO ${ICON.heart}</div>
+      <div class="brand">${LOGO()}<span>TU <span class="y">y</span> YO</span></div>
       <div class="sp"></div>
       <div class="duo" aria-label="${esc(nom('a'))} y ${esc(nom('b'))}"><span class="av a">${esc(ini('a'))}</span><span class="av b">${esc(ini('b'))}</span></div>
       <button class="icon-btn" data-act="ajustes" aria-label="Ajustes">${ICON.gear}</button>
@@ -459,12 +460,12 @@
 
   function vistaBienvenida() {
     return `<div class="welcome">
-      <div class="hearts" aria-hidden="true"><div class="a">TU</div><div class="b">YO</div></div>
+      ${LOGO('grande')}
       <div class="logo">TU <span>y</span> YO</div>
       <p>El presupuesto de los dos: cada gasto, cada deuda y cada peso que ahorran juntos.</p>
       <div class="menu">
         <button style="--i:0" data-act="setup"><span class="ico" style="background:var(--lila)">${ICON.heart}</span><span><b>Empezar nuestro presupuesto</b><small>Configura nombres e ingresos en un minuto</small></span></button>
-        <button style="--i:1" data-act="unirme"><span class="ico" style="background:var(--malva)">${ICON.link}</span><span><b>Mi pareja ya lo creó</b><small>Pega el código que te compartió</small></span></button>
+        <button style="--i:1" data-act="unirme"><span class="ico" style="background:var(--malva)">${ICON.link}</span><span><b>Mi pareja ya lo creó</b><small>Escribe el código de 6 letras que te compartió</small></span></button>
         ${PREVIEW ? `<button style="--i:2" data-act="ejemplo"><span class="ico" style="background:#5B7BE0">${ICON.spark}</span><span><b>Ver con datos de ejemplo</b><small>Una pareja ficticia con gastos, deudas y metas</small></span></button>` : ''}
       </div>
     </div>`;
