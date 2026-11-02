@@ -22,6 +22,11 @@
     del(k) { try { localStorage.removeItem(k); } catch { /* nada */ } }
   };
   const PREVIEW = !!window.TUYYO_PREVIEW;
+  const CONFIG_APP = (window.TUYYO_FIREBASE && window.TUYYO_FIREBASE.apiKey && window.TUYYO_FIREBASE.projectId) ? window.TUYYO_FIREBASE : null;
+  const ALFABETO = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const codigoCorto = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), b => ALFABETO[b % ALFABETO.length]).join('');
+  const nuevoToken = () => Array.from(crypto.getRandomValues(new Uint8Array(18)), b => b.toString(16).padStart(2, '0')).join('');
+  const conGuion = c => c.slice(0, 3) + '-' + c.slice(3);
   const Cap = window.Capacitor;
   const nativo = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
   const plugin = n => (Cap && Cap.Plugins && Cap.Plugins[n]) || null;
@@ -61,6 +66,8 @@
     target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>',
     trend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>',
     snow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="14" r="6"/><circle cx="12" cy="6" r="3"/></svg>',
+    mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"/></svg>',
+    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.8"/><path d="M16.5 14.6c2.6.2 4.4 1.9 5 5.4"/></svg>',
     chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h7M8.5 14h4"/></svg>',
     repeat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg>',
     bank: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 21h18"/></svg>',
@@ -132,18 +139,31 @@
       this.hogar = this.fb.db.collection('hogares').doc(hid);
       S.modo = 'nube';
       this.subs.forEach(u => u()); this.subs = [];
-      let primera = true;
+      let primera = true, primeraVez = true;
       const timer = setTimeout(() => { if (primera) toast('Sin conexión: verás los datos guardados en el celular.'); }, 10000);
       this.subs.push(this.hogar.onSnapshot(s => {
         primera = false; clearTimeout(timer);
         const d = s.data();
         if (!s.exists || !d) { if (!s.metadata.fromCache) { toast('Este hogar ya no existe o no tienes acceso.'); } return; }
+        const antes = S.members.length;
         S.members = d.members || []; S.cfg = Object.assign(cfgBase(), d.cfg || {});
+        if (antes === 1 && S.members.length === 2 && !primeraVez) { confeti(); vibrar(); toast(`¡${nom(yo() === 'a' ? 'b' : 'a')} se unió! Ya comparten todo.`); if (!sheet.hidden && sheetBody.querySelector('#codTxt')) cerrar(); }
+        primeraVez = false;
         render();
-      }, err => { console.error(err); toast('No tienes acceso a este hogar. Revisa el código o las reglas de Firebase.'); }));
+      }, err => {
+        console.error(err);
+        if (S.members.length) { this.desconectar(); toast('Este celular ya no está vinculado. Pide a tu pareja un código nuevo.'); }
+        else toast('No tienes acceso a este hogar. Pide a tu pareja un código nuevo.');
+      }));
+      const desde = ls.get('tuyyo:visto') || Date.now();
+      let resumido = false;
       for (const c of COLS) {
+        let primeraCol = true;
         this.subs.push(this.hogar.collection(c).onSnapshot(q => {
           S[c] = q.docs.map(d => ({ id: d.id, ...d.data() }));
+          if (!primeraCol && !q.metadata.hasPendingWrites) avisarPareja(c, q.docChanges());
+          if (primeraCol && c === 'gastos' && !q.metadata.fromCache && !resumido) { resumido = true; resumenAusencia(desde); }
+          primeraCol = false;
           render();
         }, err => console.error(c, err)));
       }
@@ -151,7 +171,7 @@
     async crearHogar(config) {
       const { db } = await this.app(config);
       const hid = db.collection('hogares').doc().id;
-      const token = Array.from(crypto.getRandomValues(new Uint8Array(18)), b => b.toString(16).padStart(2, '0')).join('');
+      const token = nuevoToken();
       const ref = db.collection('hogares').doc(hid);
       await ref.set({ members: [S.uidAuth], joinToken: token, cfg: S.cfg || cfgBase(), creado: Date.now() });
       // subir lo que había en este celular
@@ -164,9 +184,41 @@
       await batch.commit();
       ls.set(CONEX, { config, hid });
       await this.conectar(config, hid);
-      return codigoInvitacion(config, hid, token);
+      return config === CONFIG_APP ? await this.crearInvitacion(token) : codigoInvitacion(config, hid, token);
+    },
+    async crearInvitacion(token) {
+      const db = this.fb.db, hid = this.hogar.id;
+      if (!token) token = (await this.hogar.get()).data().joinToken;
+      for (let intento = 0; intento < 5; intento++) {
+        const code = codigoCorto();
+        try {
+          await db.collection('invitaciones').doc(code).set({ hid, token, creador: S.uidAuth,
+            expira: firebase.firestore.Timestamp.fromMillis(Date.now() + 48 * 3600e3) });
+          ls.set('tuyyo:invitacion', { code, expira: Date.now() + 48 * 3600e3 });
+          return code;
+        } catch (e) { if (intento === 4) throw e; }
+      }
+    },
+    async reinvitar() {
+      const token = nuevoToken();
+      await this.hogar.update({ members: [S.uidAuth], joinToken: token });
+      return this.crearInvitacion(token);
     },
     async unirse(codigo) {
+      const corto = String(codigo || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (CONFIG_APP && corto.length === 6) {
+        const { db } = await this.app(CONFIG_APP);
+        const ref = db.collection('invitaciones').doc(corto);
+        let inv;
+        try { inv = await ref.get({ source: 'server' }); } catch (e) { console.error(e); throw new Error('codigo'); }
+        if (!inv.exists) throw new Error('codigo');
+        const d = inv.data();
+        await db.collection('hogares').doc(d.hid).update({ members: firebase.firestore.FieldValue.arrayUnion(S.uidAuth), joinProof: d.token });
+        try { await ref.delete(); } catch { /* ya no hace falta */ }
+        ls.set(CONEX, { config: CONFIG_APP, hid: d.hid });
+        await this.conectar(CONFIG_APP, d.hid);
+        return;
+      }
       const inv = leerCodigo(codigo);
       const { db } = await this.app(inv.c);
       const ref = db.collection('hogares').doc(inv.h);
@@ -176,6 +228,11 @@
     },
     async invitacion() {
       const cx = ls.get(CONEX); if (!cx) return null;
+      if (CONFIG_APP && cx.config.projectId === CONFIG_APP.projectId) {
+        const g = ls.get('tuyyo:invitacion');
+        if (g && g.expira > Date.now() + 3600e3) return g.code;
+        return this.crearInvitacion();
+      }
       const s = await this.hogar.get();
       return codigoInvitacion(cx.config, cx.hid, s.data().joinToken);
     },
@@ -187,6 +244,9 @@
     },
     async poner(col, id, data) {
       id = id || uid();
+      const previo = (S[col] || []).find(x => x.id === id);
+      data = { ...data, por: previo?.por || data.por || yo() };
+      if (previo && previo.por && previo.por !== yo()) data.editadoPor = yo();
       if (S.modo === 'nube') { await this.hogar.collection(col).doc(id).set(data); }
       else {
         const d = this.leerLocal(); (d.cols[col] = d.cols[col] || {})[id] = data; this.guardarLocal(d);
@@ -201,6 +261,28 @@
       else { const d = this.leerLocal(); if (d.cols[col]) delete d.cols[col][id]; this.guardarLocal(d); S[col] = S[col].filter(x => x.id !== id); render(); }
     }
   };
+  /* Avisos cuando la pareja registra algo */
+  const QUE = { gastos: 'registró', aportes: 'aportó a una meta', ingresos: 'anotó un ingreso', deudas: 'actualizó la deuda', fijos: 'actualizó un gasto fijo', metas: 'actualizó la meta', cuentas: 'actualizó una cuenta', citas: 'escribió acuerdos de la cita' };
+  function avisarPareja(col, cambios) {
+    const autor = ch => { const d = ch.doc.data(); return ch.type === 'added' ? d.por : (d.editadoPor || d.por); };
+    const suyos = cambios.filter(ch => ch.type !== 'removed' && autor(ch) && autor(ch) !== yo());
+    if (!suyos.length) return;
+    const x = suyos[suyos.length - 1].doc.data(), quien = nom(autor(suyos[suyos.length - 1]));
+    let txt;
+    if (col === 'gastos') txt = `${quien} ${suyos[0].type === 'added' ? 'registró' : 'editó'}: ${x.privado ? 'un gasto personal' : (x.desc || CAT[x.categoria]?.n || 'un gasto')} · ${pesos(x.monto)}`;
+    else if (col === 'aportes' || col === 'ingresos') txt = `${quien} ${QUE[col]}: ${pesos(x.monto)}`;
+    else txt = `${quien} ${QUE[col] || 'hizo un cambio'}${x.nombre ? ': ' + x.nombre : ''}`;
+    if (suyos.length > 1) txt += ` (y ${suyos.length - 1} más)`;
+    toast(txt); vibrar();
+  }
+  function resumenAusencia(desde) {
+    ls.set('tuyyo:visto', Date.now());
+    const otroP = yo() === 'a' ? 'b' : 'a';
+    const nuevos = [...S.gastos, ...S.aportes, ...S.ingresos].filter(x => x.por === otroP && (x.creado || 0) > desde);
+    if (nuevos.length) setTimeout(() => toast(`Mientras no estabas, ${nom(otroP)} registró ${nuevos.length} movimiento${nuevos.length === 1 ? '' : 's'}`), 900);
+  }
+  document.addEventListener('visibilitychange', () => { if (document.hidden && S.modo === 'nube') ls.set('tuyyo:visto', Date.now()); });
+
   function codigoInvitacion(c, h, t) {
     return 'TUYYO-' + btoa(unescape(encodeURIComponent(JSON.stringify({ c, h, t }))));
   }
@@ -371,7 +453,8 @@
       <h2>${esc(nombreMes(S.mes))}</h2>
       <button class="icon-btn" data-act="mes" data-n="1" aria-label="Mes siguiente">${ICON.right}</button>
     </div>` : '<div style="height:6px"></div>'}
-    ${S.modo === 'local' ? `<div class="banner">${ICON.link}<span>${PREVIEW ? 'Vista previa: los datos quedan solo en este dispositivo.' : 'Solo en este celular. Conecta a tu pareja para compartir todo.'}</span><button class="btn soft" data-act="conectar" style="padding:8px 12px">${PREVIEW ? 'Opciones' : 'Conectar'}</button></div>` : ''}`;
+    ${S.modo === 'nube' && S.members.length < 2 ? `<div class="banner">${ICON.users}<span>Falta que ${esc(nom(yo() === 'a' ? 'b' : 'a'))} se vincule.</span><button class="btn soft" data-act="invitar" style="padding:8px 12px">Ver código</button></div>` : ''}
+    ${S.modo === 'local' ? `<div class="banner">${ICON.link}<span>${PREVIEW ? 'Vista previa: los datos quedan solo en este dispositivo.' : 'Vincula a tu pareja para que los dos vean y editen todo.'}</span><button class="btn soft" data-act="conectar" style="padding:8px 12px">${PREVIEW ? 'Opciones' : 'Vincular'}</button></div>` : ''}`;
   }
 
   function vistaBienvenida() {
@@ -464,6 +547,19 @@
       </div>` : vacio('Aún no hay movimientos este mes', 'Toca el botón + para escanear una factura o anotar un gasto.')}
     </section>
 
+    ${(() => {
+      if (S.modo !== 'nube' && !PREVIEW) return '';
+      const items = [
+        ...S.gastos.filter(x => x.categoria !== 'ajuste').map(x => ({ t: x.creado, por: x.por || x.pagadoPor, txt: descDe(x), m: x.monto, act: 'editarGasto', id: x.id })),
+        ...S.aportes.map(x => ({ t: x.creado, por: x.por || x.quien, txt: 'Aporte a ' + (S.metas.find(m => m.id === x.metaId)?.nombre || 'una meta'), m: x.monto })),
+        ...S.ingresos.map(x => ({ t: x.creado, por: x.por || x.quien, txt: x.desc || 'Ingreso extra', m: x.monto, mas: true, act: 'editarIngreso', id: x.id }))
+      ].filter(x => x.t).sort((a, b) => b.t - a.t).slice(0, 5);
+      if (!items.length) return '';
+      return `<section class="card"><h3>${ICON.users.replace('<svg', '<svg style="width:18px;height:18px;color:var(--lila)"')} Lo último de los dos</h3><div class="act">${items.map(x => `<button class="act-row" ${x.act ? `data-act="${x.act}" data-id="${esc(x.id)}"` : 'disabled'}>
+        <span class="av ${esc(x.por)}">${esc(ini(x.por))}</span><span class="t"><b>${esc(x.txt)}</b><small>${esc(x.por === yo() && S.modo === 'nube' ? 'Tú' : nom(x.por))} · ${esc(haceTiempo(x.t))}</small></span>
+        <span class="m num" ${x.mas ? 'style="color:var(--ok)"' : ''}>${x.mas ? '+' : ''}${pesos(x.m)}</span></button>`).join('')}</div></section>`;
+    })()}
+
     <section class="card">
       <h3>Cuentas claras entre los dos</h3>
       <div class="balance">
@@ -547,7 +643,7 @@
     return `
       <div class="card" style="padding:14px 18px"><div class="row" style="align-items:center">
         <div><div class="eyebrow">Gastado en el mes</div><div style="font:800 28px var(--f-display)" class="num" data-num="${Math.round(c.gastado)}" data-k="gmes">${pesos(c.gastado)}</div></div>
-        <button class="btn" data-act="escanear" style="flex:none">${ICON.cam} Escanear</button></div></div>
+        <div style="display:flex;gap:8px;flex:none"><button class="btn soft icon-only" data-act="dictar" aria-label="Dictar gasto">${ICON.mic}</button><button class="btn" data-act="escanear">${ICON.cam} Escanear</button></div></div></div>
       <section class="card">
         <h3>${ICON.repeat.replace('<svg', '<svg style="width:18px;height:18px;color:var(--lila)"')} Gastos fijos del mes <span class="sub">${fijos.length ? (pendFijos.length ? pendFijos.length + ' pendiente' + (pendFijos.length === 1 ? '' : 's') : 'todos pagados') : ''}</span></h3>
         ${fijos.length ? `<div class="muted" style="font-size:13px;margin:-6px 0 12px">Suman ${pesos(totFijos)} al mes${subs.length ? ` · ${subs.length} suscripcion${subs.length === 1 ? '' : 'es'}: ${pesos(sum(subs))} al mes, ${pesos(sum(subs) * 12)} al año` : ''}</div>
@@ -776,6 +872,7 @@
       - sum(S.deudas, d => { const r = d.responsable || 'ambos', sd = estadoDeuda(d).saldo; return r === p ? sd : r === 'ambos' ? sd * (p === 'a' ? ratioA() : 1 - ratioA()) : 0; });
     return { activos, deudas, neto: activos - deudas, a: de('a'), b: de('b') };
   }
+  const haceTiempo = ts => { const m = Math.floor((Date.now() - ts) / 60000); if (m < 1) return 'ahora'; if (m < 60) return 'hace ' + m + ' min'; const h = Math.floor(m / 60); if (h < 24) return 'hace ' + h + ' h'; const d = Math.floor(h / 24); return d === 1 ? 'ayer' : 'hace ' + d + ' días'; };
   const haceDias = ts => { if (!ts) return ''; const d = Math.floor((Date.now() - ts) / 864e5); return d <= 0 ? 'hoy' : d === 1 ? 'ayer' : 'hace ' + d + ' días'; };
   function vistaCuentas() {
     const p = patrimonio();
@@ -1031,9 +1128,10 @@
         <button class="btn full">Aportar</button>
       </form>`;
   }
-  function formIngreso(x = {}) {
+  function formIngreso(x = {}, aviso = '') {
     return `<h2>${x.id ? 'Editar ingreso extra' : 'Ingreso extra'}</h2>
       <p class="muted" style="margin-top:-6px">Primas, ventas, trabajos extra. Los sueldos fijos van en Ajustes.</p>
+      ${aviso ? `<div class="banner" style="margin-bottom:12px">${aviso}</div>` : ''}
       <form data-form="ingreso" data-id="${esc(x.id || '')}">
         <div class="field"><label for="imonto">Valor</label>${dinero('imonto', x.monto, 'required autofocus')}</div>
         <div class="field"><label for="idesc">Descripción</label><input id="idesc" name="idesc" class="input" maxlength="40" value="${esc(x.desc || '')}" placeholder="Ej: Prima de diciembre"></div>
@@ -1047,6 +1145,8 @@
     const c = S.cfg || cfgBase();
     const p = c.presupuestos || {};
     return `<h2>${inicial ? 'Su presupuesto' : 'Ajustes'}</h2>
+      ${!inicial && S.modo === 'nube' ? vistaVinculados() : ''}
+      ${!inicial && S.modo === 'local' ? `<button class="btn soft full" style="margin-bottom:14px" data-act="conectar">${ICON.users} Vincular con mi pareja</button>` : ''}
       <form data-form="ajustes" data-inicial="${inicial ? 1 : ''}">
         <div class="row"><div class="field"><label for="na">${inicial ? 'Tu nombre' : 'Persona 1'}</label><input id="na" name="na" class="input" maxlength="20" required value="${esc(c.nombres.a)}" ${inicial ? 'autofocus' : ''}></div>
           <div class="field"><label for="nb">${inicial ? 'Tu pareja' : 'Persona 2'}</label><input id="nb" name="nb" class="input" maxlength="20" required value="${esc(c.nombres.b)}"></div></div>
@@ -1065,9 +1165,31 @@
       </form>
       ${inicial ? '' : `<div style="display:grid;gap:10px;margin-top:18px">
         <button class="btn ghost full" data-act="exportar">Exportar todos los movimientos (Excel)</button>
-        ${S.modo === 'nube' ? `<button class="btn soft full" data-act="invitar">${ICON.link} Volver a ver el código para mi pareja</button>
-          <button class="btn ghost full" data-act="desconectar">Usar solo en este celular</button>` : `<button class="btn soft full" data-act="conectar">${ICON.link} Conectar con mi pareja</button>`}
-        <p class="muted" style="font-size:12px;text-align:center">Modo: ${S.modo === 'nube' ? 'sincronizado con Firebase' : 'solo este celular'}</p></div>`}`;
+        ${S.modo === 'nube' ? `<button class="btn ghost full" data-act="desconectar">Dejar de sincronizar en este celular</button>` : ''}
+        <p class="muted" style="font-size:12px;text-align:center">Modo: ${S.modo === 'nube' ? 'vinculados y sincronizados' : 'solo este celular'}</p></div>`}`;
+  }
+  function vistaVincular() {
+    return `<h2>Vincular con tu pareja</h2>
+      <div class="vinc-hero" aria-hidden="true"><span class="av a">${esc(ini('a'))}</span><span class="vinc-line"></span><span class="av b">${esc(ini('b'))}</span></div>
+      <ul class="vinc-lista">
+        <li>Los dos ven y editan todo en vivo: gastos, deudas, metas, presupuestos y ajustes.</li>
+        <li>Cada movimiento queda con el nombre de quien lo registró, y te avisamos cuando tu pareja agrega algo.</li>
+        <li>Lo que ya tienes en este celular se sube y lo verá tu pareja.</li>
+        <li>Solo entran dos personas, con un código que vence en 48 horas.</li>
+      </ul>
+      <button class="btn full" data-act="crearCodigo">${ICON.link} Crear código para mi pareja</button>`;
+  }
+  function vistaVinculados() {
+    const dos = S.members.length >= 2;
+    const otroP = yo() === 'a' ? 'b' : 'a';
+    return `<section class="vinc-card">
+      <div class="vinc-hero small" aria-hidden="true"><span class="av a">${esc(ini('a'))}</span><span class="vinc-line ${dos ? 'on' : ''}"></span><span class="av b">${esc(ini('b'))}</span></div>
+      <b>${dos ? `${esc(nom(yo()))} (tú) y ${esc(nom(otroP))} están vinculados` : 'Esperando a tu pareja'}</b>
+      <small>${dos ? 'Los dos tienen el mismo control: ven, agregan, editan y borran todo. Los cambios llegan al instante.' : 'Comparte el código para que tu pareja entre desde su celular.'}</small>
+      <div style="display:grid;gap:8px;margin-top:10px">
+        ${dos ? '' : `<button class="btn full" data-act="invitar">${ICON.link} Ver código para mi pareja</button>`}
+        ${dos ? `<div id="reZona"><button class="btn ghost full" data-act="pedirReinvitar">Mi pareja cambió de celular</button></div>` : ''}
+      </div></section>`;
   }
   function formConectar() {
     return `<h2>Conectar con tu pareja</h2>
@@ -1085,23 +1207,29 @@
   }
   function formUnirme() {
     return `<h2>Unirme a mi pareja</h2>
-      <p class="muted" style="margin-top:-6px">Pídele a tu pareja el código desde Ajustes → Conectar y pégalo aquí.</p>
+      <p class="muted" style="margin-top:-6px">En el celular de tu pareja: Ajustes → Vincular con mi pareja. Escribe aquí el código de 6 letras que le aparece.</p>
       <form data-form="unirme">
-        <div class="field"><label for="codigo">Código de invitación</label><textarea id="codigo" name="codigo" class="input" required placeholder="TUYYO-..." autofocus></textarea></div>
-        <button class="btn full" id="btnUnir">Unirme</button>
+        <div class="field"><label for="codigo">Código de tu pareja</label>${CONFIG_APP
+          ? '<input id="codigo" name="codigo" class="input code-in" required maxlength="400" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC-123" autofocus>'
+          : '<textarea id="codigo" name="codigo" class="input" required placeholder="TUYYO-..." autofocus></textarea>'}</div>
+        <button class="btn full" id="btnUnir">Vincularme</button>
       </form>`;
   }
-  function vistaCodigo(cod) {
-    return `<h2>¡Listo! Ahora tu pareja</h2>
-      <p class="muted" style="margin-top:-6px">Envíale este código. En su celular abre TU Y YO, toca «Mi pareja ya lo creó» y lo pega. Es privado: quien lo tenga puede unirse, y el hogar acepta solo dos personas.</p>
-      <div class="code" id="codTxt" tabindex="0">${esc(cod)}</div>
-      <div class="row" style="margin-top:12px"><button class="btn" data-act="compartirCod">Compartir</button><button class="btn soft" data-act="copiarCod">Copiar</button></div>`;
+  function vistaCodigo(cod, ejemplo = false) {
+    const corto = cod.length === 6;
+    return `<h2>${ejemplo ? 'Así se ve el código' : '¡Listo! Ahora tu pareja'}</h2>
+      <p class="muted" style="margin-top:-6px">${corto ? 'En su celular, tu pareja instala TU Y YO, toca «Mi pareja ya lo creó» y escribe este código. Vence en 48 horas y sirve para una sola persona.' : 'Envíale este código. En su celular abre TU Y YO, toca «Mi pareja ya lo creó» y lo pega. Solo entran dos personas.'}</p>
+      ${corto ? `<div class="code-big" id="codTxt" tabindex="0" aria-label="Código ${esc(cod.split('').join(' '))}">${esc(conGuion(cod))}</div>${ejemplo ? '<p class="muted" style="text-align:center;margin:-4px 0 8px;font-size:12px">Código de ejemplo: en la app se genera uno real.</p>' : ''}`
+        : `<div class="code" id="codTxt" tabindex="0">${esc(cod)}</div>`}
+      <div class="row" style="margin-top:12px"><button class="btn" data-act="compartirCod" ${ejemplo ? 'disabled' : ''}>Compartir</button><button class="btn soft" data-act="copiarCod">Copiar</button></div>
+      <p class="muted" style="font-size:13px;margin-top:14px">Cuando tu pareja entre, verás aquí: «${esc(nom('b'))} se unió».</p>`;
   }
 
   /* ---------- Vista previa ---------- */
   function soloApp() {
-    return `<h2>Esto funciona en la app Android</h2><p class="muted">Conectar los dos celulares necesita la app instalada y tu proyecto de Firebase. Aquí puedes probar todo lo demás en este dispositivo.</p>
-      <button class="btn soft full" data-act="reiniciar">Borrar datos de prueba y empezar de cero</button>`;
+    return `${vistaVincular().replace('data-act="crearCodigo"', 'data-act="codigoEjemplo"')}
+      <p class="muted" style="font-size:13px;margin-top:12px">En esta vista previa la vinculación es de muestra: funciona de verdad en la app Android.</p>
+      <button class="btn ghost full" style="margin-top:6px" data-act="reiniciar">Borrar datos de prueba y empezar de cero</button>`;
   }
   function cargarEjemplo() {
     const m0 = mesDe(hoy()), m1 = sumarMes(m0, -1), m2 = sumarMes(m0, -2);
@@ -1109,7 +1237,8 @@
     const ahora = Date.now(), r = 7700000 > 0 ? 4500000 / 7700000 : .5;
     const cols = { gastos: {}, deudas: {}, metas: {}, aportes: {}, ingresos: {}, fijos: {}, cuentas: {}, citas: {} };
     let n = 0; const add = (c, o) => { cols[c]['e' + (n++)] = o; };
-    const g = (m, d, desc, monto, cat, pago, tipo = 'compartido', extra = {}) => add('gastos', { desc, monto, fecha: dia(m, d), categoria: cat, pagadoPor: pago, tipo, ratioA: r, creado: ahora - n * 1000, ...extra });
+    const tsDe = f => { const t = new Date(f + 'T' + pad(8 + (n * 7) % 13) + ':' + pad((n * 17) % 60) + ':00').getTime(); return Math.min(t, ahora - (n % 9 + 1) * 37 * 60000); };
+    const g = (m, d, desc, monto, cat, pago, tipo = 'compartido', extra = {}) => add('gastos', { desc, monto, fecha: dia(m, d), categoria: cat, pagadoPor: pago, tipo, ratioA: r, creado: tsDe(dia(m, d)), por: pago, ...extra });
     const fijo = o => { const id = 'e' + (n++); cols.fijos[id] = { activo: true, ...o }; return id; };
     const fArr = fijo({ nombre: 'Arriendo', monto: 1200000, dia: 1, categoria: 'hogar', pagadoPor: 'a', tipo: 'compartido' });
     const fEpm = fijo({ nombre: 'Servicios EPM', monto: 210000, dia: 6, categoria: 'hogar', pagadoPor: 'b', tipo: 'compartido' });
@@ -1143,8 +1272,8 @@
     add('metas', { nombre: 'Viaje a Cartagena', objetivo: 3500000, fechaLimite: dia(sumarMes(m0, 8), 15) });
     add('metas', { nombre: 'Fondo de emergencia', objetivo: 6000000, fechaLimite: null });
     const metas = Object.keys(cols.metas);
-    for (const m of [m2, m1, m0]) { add('aportes', { metaId: metas[0], monto: 300000, quien: 'a', fecha: dia(m, 2), creado: ahora }); add('aportes', { metaId: metas[1], monto: 250000, quien: 'b', fecha: dia(m, 3), creado: ahora }); }
-    add('ingresos', { monto: 450000, desc: 'Venta de postres', quien: 'b', fecha: dia(m0, 9) });
+    for (const m of [m2, m1, m0]) { add('aportes', { metaId: metas[0], monto: 300000, quien: 'a', por: 'a', fecha: dia(m, 2), creado: tsDe(dia(m, 2)) }); add('aportes', { metaId: metas[1], monto: 250000, quien: 'b', por: 'b', fecha: dia(m, 3), creado: tsDe(dia(m, 3)) }); }
+    add('ingresos', { monto: 450000, desc: 'Venta de postres', quien: 'b', por: 'b', fecha: dia(m0, 1), creado: ahora - 5 * 3600e3 });
     g(m0, Math.max(1, Number(hoy().slice(8)) - 1), 'Pedido Amazon', 268000, 'otros', 'a', 'compartido', { revisar: true, nota: '¿De verdad necesitábamos la freidora de aire?' });
     g(m0, Math.max(1, Number(hoy().slice(8)) - 2), 'Regalo sorpresa', 150000, 'regalos', 'a', 'a', { privado: true });
     add('cuentas', { nombre: 'Cuenta de ahorros Bancolombia', tipo: 'banco', saldo: 3850000, dueno: 'ambos', actualizado: ahora - 3 * 864e5 });
@@ -1157,6 +1286,89 @@
     const cfg = Object.assign(cfgBase(), { nombres: { a: 'Andrés', b: 'Camila' }, ingresos: { a: 4500000, b: 3200000 }, mesada: { a: 300000, b: 300000 }, metaAhorroPct: 15,
       presupuestos: { mercado: 600000, hogar: 1650000, transporte: 250000, comida: 200000, diversion: 350000, salud: 120000, ropa: 200000, mascotas: 120000, regalos: 100000, otros: 150000 } });
     Store.guardarLocal({ cfg, cols }); Store.iniciarLocal(); confeti(); toast('Datos de ejemplo cargados');
+  }
+
+  /* ---------- Gastos por voz ---------- */
+  const EJEMPLOS_VOZ = () => [
+    'Gasté 45 mil en mercado',
+    `${(S.cfg?.nombres?.b || 'Camila').split(' ')[0]} pagó 85 mil de cine entre los dos`,
+    'Veinte mil en taxi ayer, para mí',
+    'Un millón doscientos de arriendo',
+    'Me pagaron la prima, 2 millones'
+  ];
+  function vistaVoz() {
+    return `<h2>Dime el gasto</h2>
+      <p class="muted" style="margin-top:-6px">Di el valor, en qué fue y, si quieres, quién pagó y si es de los dos.</p>
+      <div class="voz">
+        <button type="button" class="mic" id="micBtn" data-act="escuchar" aria-label="Hablar">${ICON.mic}<span class="ondas" aria-hidden="true"><i></i><i></i><i></i></span></button>
+        <div class="voz-txt" id="vozTxt" aria-live="polite">Toca el micrófono y habla</div>
+      </div>
+      <div class="chips voz-ej" aria-label="Ejemplos">${EJEMPLOS_VOZ().map(e => `<button type="button" class="chip" data-act="ejemploVoz" data-t="${esc(e)}">«${esc(e)}»</button>`).join('')}</div>
+      <form data-form="voz" style="margin-top:14px">
+        <div class="field"><label for="vozFrase">O escríbelo como lo dirías</label>
+          <div class="row"><input id="vozFrase" name="vozFrase" class="input" maxlength="200" autocomplete="off" placeholder="Ej: 30 mil de domicilio, pagó ${esc((S.cfg?.nombres?.b || 'Camila').split(' ')[0])}" style="flex:3;min-width:0"><button class="btn" style="flex:1">Listo</button></div></div>
+      </form>`;
+  }
+  let escuchando = false, ultimaFrase = '', reconWeb = null, vozFin = null;
+  function setVoz(txt, estado) {
+    const t = $('#vozTxt'), b = $('#micBtn');
+    if (t && txt != null) t.textContent = txt;
+    if (b) { b.classList.toggle('on', estado === 'on'); b.setAttribute('aria-label', estado === 'on' ? 'Dejar de escuchar' : 'Hablar'); }
+  }
+  async function escuchar() {
+    if (escuchando) { detenerVoz(); return; }
+    ultimaFrase = '';
+    const SR = plugin('SpeechRecognition');
+    if (nativo && SR) {
+      try {
+        const disp = await SR.available();
+        if (!disp.available) { setVoz('Este celular no tiene reconocimiento de voz. Instala o activa «Google» o «Servicios de voz de Google».'); return; }
+        let perm = await SR.checkPermissions();
+        if (perm.speechRecognition !== 'granted') perm = await SR.requestPermissions();
+        if (perm.speechRecognition !== 'granted') { setVoz('Necesitamos permiso del micrófono. Actívalo en Ajustes del celular → Apps → TU Y YO.'); return; }
+        await SR.removeAllListeners();
+        await SR.addListener('partialResults', d => { const m = d.matches && d.matches[0]; if (m) { ultimaFrase = m; setVoz('«' + m + '»', 'on'); } });
+        await SR.addListener('listeningState', d => { if (d.status === 'stopped') terminarVoz(); });
+        escuchando = true; setVoz('Te escucho…', 'on'); vibrar();
+        await SR.start({ language: 'es-CO', maxResults: 1, partialResults: true, popup: false });
+        clearTimeout(vozFin); vozFin = setTimeout(() => { if (escuchando) detenerVoz(); }, 15000);
+      } catch (err) { console.error(err); escuchando = false; setVoz('No pudimos usar el micrófono. Escribe la frase abajo.'); }
+      return;
+    }
+    const W = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!W) { setVoz(PREVIEW ? 'En esta vista previa no hay micrófono. Escribe la frase abajo o toca un ejemplo: en la app Android funciona con la voz.' : 'Este dispositivo no permite dictar. Escribe la frase abajo.'); return; }
+    try {
+      reconWeb = new W(); reconWeb.lang = 'es-CO'; reconWeb.interimResults = true; reconWeb.maxAlternatives = 1;
+      reconWeb.onresult = e => { ultimaFrase = Array.from(e.results).map(r => r[0].transcript).join(' '); setVoz('«' + ultimaFrase + '»', 'on'); };
+      reconWeb.onerror = e => { escuchando = false; setVoz(e.error === 'not-allowed' || e.error === 'service-not-allowed' ? 'El micrófono no está disponible aquí. Escribe la frase abajo o toca un ejemplo.' : 'No te escuché bien. Intenta de nuevo o escríbelo.'); };
+      reconWeb.onend = () => terminarVoz();
+      escuchando = true; setVoz('Te escucho…', 'on'); reconWeb.start();
+    } catch (err) { console.error(err); escuchando = false; setVoz('El micrófono no está disponible aquí. Escribe la frase abajo.'); }
+  }
+  function detenerVoz() {
+    const SR = plugin('SpeechRecognition');
+    try { if (nativo && SR) SR.stop(); else if (reconWeb) reconWeb.stop(); } catch { /* ya detenido */ }
+    setTimeout(terminarVoz, 600);
+  }
+  function terminarVoz() {
+    if (!escuchando) return;
+    escuchando = false; clearTimeout(vozFin);
+    try { plugin('SpeechRecognition')?.removeAllListeners(); } catch { /* nada */ }
+    if (ultimaFrase.trim()) entenderFrase(ultimaFrase);
+    else setVoz('No te escuché. Toca el micrófono e intenta otra vez.');
+  }
+  function entenderFrase(frase) {
+    const r = VOZ.interpretar(frase, S.cfg.nombres, yo(), hoy());
+    vibrar();
+    const oido = `Entendí: «${esc(frase)}». Revisa y guarda.`;
+    if (r.tipo === 'ingreso') { sheetBody.innerHTML = formIngreso({ monto: r.monto, desc: r.desc || 'Ingreso extra', quien: r.quien, fecha: r.fecha }, oido); return; }
+    const g = { monto: r.monto, desc: r.desc, categoria: r.categoria, pagadoPor: r.pagadoPor, tipo: r.de, fecha: r.fecha };
+    if (r.categoria === 'deudas') {
+      const nf = VOZ.norm(frase);
+      const d = S.deudas.find(x => estadoDeuda(x).saldo > 0 && (VOZ.norm(x.nombre).split(' ').some(w => w.length > 3 && nf.includes(w)) || (bancoDe(x) && nf.includes(VOZ.norm(bancoDe(x)).split(' ')[0]))));
+      if (d) { g.deudaId = d.id; g.desc = 'Pago ' + d.nombre; }
+    }
+    sheetBody.innerHTML = formGasto(g, r.monto ? oido : `Entendí: «${esc(frase)}», pero no el valor. Escríbelo.`);
   }
 
   /* ---------- Escaneo de facturas ---------- */
@@ -1205,8 +1417,21 @@
       case 'filtro': S.filtro = t.dataset.f; render(); break;
       case 'ajustes': abrir(formAjustes(false)); break;
       case 'setup': abrir(formAjustes(true)); break;
-      case 'unirme': abrir(PREVIEW ? soloApp() : formUnirme()); break;
-      case 'conectar': abrir(PREVIEW ? soloApp() : formConectar()); break;
+      case 'unirme': abrir(PREVIEW ? `${formUnirme().replace('data-form="unirme"', 'data-form="unirmeEjemplo"')}<p class="muted" style="font-size:13px">En la vista previa no se puede vincular de verdad.</p>` : formUnirme()); break;
+      case 'conectar': abrir(PREVIEW ? soloApp() : CONFIG_APP ? vistaVincular() : formConectar()); break;
+      case 'dictar': abrir(vistaVoz(), () => { if (escuchando) detenerVoz(); }); setTimeout(() => { if (nativo) escuchar(); }, 450); break;
+      case 'escuchar': escuchar(); break;
+      case 'ejemploVoz': { const i = $('#vozFrase'); if (i) i.value = t.dataset.t; entenderFrase(t.dataset.t); break; }
+      case 'codigoEjemplo': abrir(vistaCodigo('K7M4QP', true)); break;
+      case 'crearCodigo': {
+        t.disabled = true; t.textContent = 'Creando código…';
+        try { const cod = await Store.crearHogar(CONFIG_APP); vibrar(); confeti(); sheetBody.innerHTML = vistaCodigo(cod); }
+        catch (err) { console.error(err); toast('No pudimos crear el código. Revisa tu conexión a internet.'); t.disabled = false; t.textContent = 'Crear código para mi pareja'; }
+        break;
+      }
+      case 'pedirReinvitar': $('#reZona').innerHTML = `<p class="muted" style="font-size:13px;margin:0 0 8px">${esc(nom(yo() === 'a' ? 'b' : 'a'))} saldrá del celular anterior y entrará con un código nuevo. Los datos no se borran.</p><div class="row"><button class="btn ghost" data-act="cancelReinvitar">Cancelar</button><button class="btn" data-act="reinvitar">Crear código nuevo</button></div>`; break;
+      case 'cancelReinvitar': $('#reZona').innerHTML = '<button class="btn ghost full" data-act="pedirReinvitar">Mi pareja cambió de celular</button>'; break;
+      case 'reinvitar': try { const cod = await Store.reinvitar(); abrir(vistaCodigo(cod)); } catch (err) { console.error(err); toast('No pudimos crear el código nuevo.'); } break;
       case 'ejemplo': cargarEjemplo(); break;
       case 'reiniciar': ls.del(LOCAL); S.tab = 'inicio'; cerrar(); Store.iniciarLocal(); break;
       case 'escanear': cerrarMenu(); tomarFoto('camara'); break;
@@ -1257,7 +1482,7 @@
         $('#meta').value = 20; toast('50% necesidades, 30% gustos, 20% ahorro'); break;
       }
       case 'invitar': {
-        try { const cod = await Store.invitacion(); abrir(vistaCodigo(cod)); } catch (err) { console.error(err); toast('No pudimos obtener el código.'); }
+        try { const cod = await Store.invitacion(); abrir(vistaCodigo(cod)); } catch (err) { console.error(err); toast('No pudimos obtener el código. Revisa tu conexión.'); }
         break;
       }
       case 'copiarCod': {
@@ -1268,7 +1493,8 @@
       }
       case 'compartirCod': {
         const txt = $('#codTxt').textContent; const Sh = plugin('Share');
-        try { if (Sh) await Sh.share({ title: 'TU Y YO', text: 'Únete a nuestro presupuesto en TU Y YO con este código:\n' + txt }); else if (navigator.share) await navigator.share({ text: txt }); else throw 0; }
+        const msg = txt.length <= 8 ? `Vinculémonos en TU Y YO: abre la app, toca «Mi pareja ya lo creó» y escribe este código: ${txt}` : 'Únete a nuestro presupuesto en TU Y YO con este código:\n' + txt;
+        try { if (Sh) await Sh.share({ title: 'TU Y YO', text: msg }); else if (navigator.share) await navigator.share({ text: msg }); else throw 0; }
         catch { try { await navigator.clipboard.writeText(txt); toast('Código copiado'); } catch { toast('Copia el código manualmente'); } }
         break;
       }
@@ -1282,8 +1508,9 @@
   fab.addEventListener('click', () => {
     if (fab.getAttribute('aria-expanded') === 'true') { cerrar(); return; }
     const op = [
+      ['dictar', ICON.mic, 'var(--malva)', 'Dictar gasto', 'Dilo en voz alta y la app lo anota'],
       ['escanear', ICON.cam, 'var(--lila)', 'Escanear factura', 'Toma la foto y la app llena el gasto'],
-      ['galeria', ICON.img, 'var(--malva)', 'Factura desde la galería', 'Usa una foto que ya tengas'],
+      ['galeria', ICON.img, '#B07A86', 'Factura desde la galería', 'Usa una foto que ya tengas'],
       ['nuevoGasto', ICON.pen, '#5B7BE0', 'Anotar gasto', 'Escribe el valor y la categoría'],
       ['elegirDeuda', ICON.card, '#7A5C99', 'Pagar una deuda', 'Registra quién pagó la cuota'],
       ['elegirMeta', ICON.piggy, 'var(--ok)', 'Aportar a una meta', 'Suma a sus ahorros'],
@@ -1303,6 +1530,7 @@
     if (el.classList.contains('money')) { const n = digitos(el.value); el.value = n ? pesos(n) : ''; }
     if (el.name === 'gcat') { const c = $('#campoDeuda'); if (c) c.hidden = el.value !== 'deudas'; }
     if (el.form?.dataset.form === 'pagoDeuda') resumenPago(el.form);
+    if (el.classList.contains('code-in') && el.value.length <= 8) { const c = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); el.value = c.length > 3 ? conGuion(c) : c; }
     if (el.id === 'buscar') { S.buscar = el.value; const l = $('#listaG'); if (l) l.innerHTML = listaGastos(); }
   });
   document.addEventListener('change', e => {
@@ -1409,7 +1637,8 @@
         vibrar(); confeti(); cerrar(); toast('¡Un paso más cerca!');
       } else if (tipo === 'ingreso') {
         const monto = digitos(v('imonto')); if (!monto) { toast('Escribe el valor'); return; }
-        await Store.poner('ingresos', id, { monto, desc: v('idesc').trim().slice(0, 40), quien: v('iquien') === 'b' ? 'b' : 'a', fecha: v('ifecha') || hoy() });
+        const prevI = id ? S.ingresos.find(x => x.id === id) : null;
+        await Store.poner('ingresos', id, { monto, desc: v('idesc').trim().slice(0, 40), quien: v('iquien') === 'b' ? 'b' : 'a', fecha: v('ifecha') || hoy(), creado: prevI?.creado || Date.now() });
         vibrar(); cerrar(); toast('Ingreso guardado');
       } else if (tipo === 'ajustes') {
         const c = Object.assign(cfgBase(), S.cfg || {});
@@ -1430,11 +1659,16 @@
         boton.textContent = 'Creando…';
         const cod = await Store.crearHogar(config);
         vibrar(); confeti(); sheetBody.innerHTML = vistaCodigo(cod);
+      } else if (tipo === 'voz') {
+        const fr = v('vozFrase').trim(); if (!fr) { toast('Escribe o di el gasto'); return; }
+        entenderFrase(fr);
+      } else if (tipo === 'unirmeEjemplo') {
+        toast('En la app Android aquí quedarían vinculados');
       } else if (tipo === 'unirme') {
-        boton.textContent = 'Conectando…';
+        boton.textContent = 'Vinculando…';
         try { await Store.unirse(v('codigo')); }
-        catch (err) { console.error(err); toast(err.message === 'codigo' ? 'El código no es válido. Pídelo de nuevo.' : 'No pudimos unirte: el código cambió o el hogar ya tiene dos personas.'); boton.textContent = 'Unirme'; return; }
-        vibrar(); confeti(); cerrar(); toast('¡Ya están conectados!');
+        catch (err) { console.error(err); toast(err.message === 'codigo' ? 'Ese código no existe o ya venció. Pide uno nuevo.' : 'No pudimos vincularte: el código ya se usó o el hogar ya tiene dos personas.'); boton.textContent = 'Vincularme'; return; }
+        vibrar(); confeti(); cerrar(); toast(`¡Listo! Ya estás vinculado con ${nom(yo() === 'a' ? 'b' : 'a')}`);
       }
     } catch (err) {
       console.error(err);

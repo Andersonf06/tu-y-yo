@@ -33,6 +33,17 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      - name: Incluir la configuración de Firebase
+        env:
+          FIREBASE_CONFIG: ${{ vars.FIREBASE_CONFIG }}
+        run: |
+          if [ -n "$FIREBASE_CONFIG" ]; then
+            node -e 'const c=JSON.parse(process.env.FIREBASE_CONFIG);const k=["apiKey","authDomain","projectId","storageBucket","messagingSenderId","appId"];const o={};for(const x of k)if(typeof c[x]==="string")o[x]=c[x];if(!o.apiKey||!o.projectId||!o.appId)throw new Error("FIREBASE_CONFIG incompleto");require("fs").writeFileSync("www/firebase-config.js","window.TUYYO_FIREBASE = "+JSON.stringify(o)+";\n")'
+            echo "Configuración de Firebase incluida: la vinculación usa códigos de 6 letras."
+          else
+            echo "::warning::Sin variable FIREBASE_CONFIG: al vincular, la app pedirá pegar la configuración."
+          fi
+
       - name: Copiar la app web al proyecto Android
         run: npx cap sync android
 
