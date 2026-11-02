@@ -13,10 +13,14 @@
 - **Fotos de facturas.** Se leen en el celular y no se suben a ningún servidor; solo se guardan el valor, la fecha y los productos.
 - **Costos.** Firebase en plan Spark no tiene facturación: si se pasa del límite gratuito deja de responder, no cobra.
 
+## Firma de la APK
+
+La APK se firma con `android/app/firma-publica.jks`, una llave cuya contraseña está en el repositorio. Sirve para instalar la app directamente y actualizarla encima sin perder datos. No es privada: si algún día publicas en Google Play, crea una llave privada y guárdala en los secretos del repositorio (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`); el flujo de compilación ya la usa si existe.
+
 ## Lo que se probó
 
 - Simulación con cuatro celulares (dos navegadores por persona) y una base que aplica las mismas reglas: crear código, unirse, ver y editar datos del otro, avisos, cambiar de celular, y un tercero que intenta entrar con un código usado (rechazado).
-- No se pudo correr el emulador oficial de Firebase en este entorno. Antes de usarla con datos reales, verifica las reglas en la consola de Firebase (**Reglas → Área de pruebas**).
+- Reglas verificadas contra el proyecto real de Firebase con 16 pruebas: la pareja lee, escribe, se une con el código y cambia ajustes; un tercero recibe 403 al leer, escribir, listar o unirse; montos negativos y colecciones desconocidas se rechazan. Quedó un documento de prueba `hogares/prueba…` sin datos personales que puedes borrar desde la consola.
 
 ## Pendiente para ti
 

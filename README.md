@@ -4,9 +4,13 @@ App Android para llevar el presupuesto en pareja: gastos de cada uno y compartid
 
 ## Descargar la APK
 
-Ve a **Releases** (a la derecha en GitHub) y descarga `TU-Y-YO.apk` en el celular. Ábrela e instala. Si Android lo pide, permite "Instalar apps desconocidas" para el navegador o el administrador de archivos.
+**[Descargar TU-Y-YO.apk (última versión)](https://github.com/Andersonf06/tu-y-yo/releases/latest/download/TU-Y-YO.apk)**
 
-Cada vez que se sube un cambio a `main`, GitHub Actions compila una APK nueva y la publica en Releases.
+1. Abre el enlace desde el celular Android y descarga el archivo.
+2. Ábrelo. Si Android lo pide, permite "Instalar apps desconocidas" para el navegador o el administrador de archivos.
+3. Instala y abre TU Y YO. Los dos instalan la misma APK; uno crea el presupuesto y el otro toca "Mi pareja ya lo creó".
+
+Cada cambio que se sube a `main` compila una versión nueva en **Releases**. Como todas usan la misma firma, se instalan encima de la anterior sin perder datos.
 
 ## Qué hace
 
@@ -38,9 +42,11 @@ Cada uno instala la APK en su celular. Uno toca **Ajustes → Vincular con mi pa
 - El código vence en 48 horas, sirve una sola vez y el hogar acepta solo dos personas.
 - Si alguno cambia de celular: **Ajustes → Mi pareja cambió de celular** crea un código nuevo y el celular viejo pierde el acceso.
 
-### Configuración única (la hace quien publica la app)
+### Firebase (ya configurado)
 
-Los datos compartidos viven en un proyecto gratuito de Firebase:
+La app ya viene conectada al proyecto gratuito de Firebase `tu-y-yo-82a7d` (plan Spark, sin tarjeta: no puede generar cobros), con acceso anónimo, Firestore en modo producción y las reglas de `firestore.rules` publicadas. La configuración está en `www/firebase-config.js`.
+
+Si algún día quieres usar otro proyecto:
 
 1. En <https://console.firebase.google.com> crea un proyecto y quédate en el plan **Spark (gratis)**.
 2. **Authentication → Método de acceso → Anónimo → Activar.**
