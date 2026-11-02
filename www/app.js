@@ -33,11 +33,11 @@
   const vibrar = () => { try { plugin('Haptics')?.impact({ style: 'LIGHT' }); } catch { /* opcional */ } };
 
   const CATS = [
-    { id: 'mercado', n: 'Mercado', c: '#8B63E6' },
+    { id: 'mercado', n: 'Mercado', c: '#3552E8' },
     { id: 'hogar', n: 'Hogar y servicios', c: '#5B7BE0' },
     { id: 'transporte', n: 'Transporte', c: '#2F9FB3' },
     { id: 'comida', n: 'Comida fuera', c: '#DD8436' },
-    { id: 'diversion', n: 'Diversión', c: '#CF5F98' },
+    { id: 'diversion', n: 'Diversión', c: '#E2603F' },
     { id: 'salud', n: 'Salud', c: '#2B9468' },
     { id: 'ropa', n: 'Ropa y cuidado', c: '#B07A86' },
     { id: 'mascotas', n: 'Mascotas', c: '#9C7A3C' },
@@ -50,7 +50,7 @@
   const NECESIDADES = ['mercado', 'hogar', 'transporte', 'salud', 'educacion', 'mascotas'];
   const COLS = ['gastos', 'deudas', 'metas', 'aportes', 'ingresos', 'fijos', 'cuentas', 'citas'];
 
-  const LOGO = (cls = '') => `<span class="logo-tile ${cls}" aria-hidden="true"><svg viewBox="0 0 100 100"><g transform="translate(0 6)"><path d="M25 7.5 L50 -3 L75 7.5" fill="none" stroke="#5EE6A8" class="techo" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M29 42 C29 57 40 63 50 69" fill="none" stroke="#FFFFFF" stroke-width="12.5" stroke-linecap="round"/><path d="M71 42 C71 57 60 63 50 69" fill="none" stroke="#FFD3E8" stroke-width="12.5" stroke-linecap="round"/><path d="M50 69 V85" fill="none" stroke="#5EE6A8" stroke-width="12.5" stroke-linecap="round"/><circle class="cabeza a" cx="29" cy="23.5" r="10.5" fill="#FFFFFF"/><circle class="cabeza b" cx="71" cy="23.5" r="10.5" fill="#FFD3E8"/></g></svg></span>`;
+  const LOGO = (cls = '') => `<span class="logo-tile ${cls}" aria-hidden="true"><svg viewBox="0 0 100 100"><g transform="translate(0 -4)"><circle class="cab a" cx="28" cy="26" r="11" fill="#5B76FF"/><circle class="cab b" cx="72" cy="26" r="11" fill="#2FD08E"/><path class="brazo a" d="M15 88 L15 62 C15 50 21 44 28 44 C34 44 38 47 40 52" fill="none" stroke="#5B76FF" stroke-width="12" stroke-linecap="round"/><path class="brazo b" d="M85 88 L85 62 C85 50 79 44 72 44 C66 44 62 47 60 52" fill="none" stroke="#2FD08E" stroke-width="12" stroke-linecap="round"/><g class="moneda"><circle cx="50" cy="66" r="17.5" fill="#0F1B3D"/><circle cx="50" cy="66" r="15" fill="#FFB21E"/><g class="signo"><g transform="translate(50 66) scale(1.26)" fill="none" stroke="#B86E00" stroke-width="2.8" stroke-linecap="round"><path d="M0 -8.5 V8.5"/><path d="M4.6 -4.2 C3.6 -6.4 -4.6 -6.6 -4.6 -2.4 C-4.6 1.6 4.6 -0.2 4.6 3.6 C4.6 7.4 -3.6 7.4 -5 4.8"/></g></g></g></g></svg></span>`;
   const ICON = {
     heart: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.3-9.2C1.4 8.4 3.6 5 7 5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.4 0 5.6 3.4 4.3 6.8C19.5 16.4 12 21 12 21z"/></svg>',
     gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
@@ -384,13 +384,13 @@
     if (st.dias < 0) return `<span class="pill bad">Vencida hace ${-st.dias} día${st.dias === -1 ? '' : 's'}</span>`;
     if (st.dias === 0) return '<span class="pill bad">Vence hoy</span>';
     if (st.dias <= 5) return `<span class="pill warn">Vence en ${st.dias} día${st.dias === 1 ? '' : 's'}</span>`;
-    return `<span class="pill lila">Vence el ${fechaCorta(st.proximo)}</span>`;
+    return `<span class="pill azul">Vence el ${fechaCorta(st.proximo)}</span>`;
   }
   const bancoDe = d => d.banco || d.entidad || '';
   function filaPago(d, st, i) {
     const falta = st.alDia ? Math.min(d.cuota || 0, st.saldo) : Math.max(0, st.cuotaMes - st.pagadoMes);
     return `<div class="pago-row" style="--i:${i}">
-      <span class="ico" style="background:${st.dias != null && st.dias < 0 ? 'var(--bad)' : 'var(--lila)'}" aria-hidden="true">${ICON.card}</span>
+      <span class="ico" style="background:${st.dias != null && st.dias < 0 ? 'var(--bad)' : 'var(--azul)'}" aria-hidden="true">${ICON.card}</span>
       <div class="t"><b>${esc(d.nombre)}</b><small>${esc(bancoDe(d) || TIPOS_DEUDA[d.tipo] || '')} · ${pesos(falta)}</small><div>${chipVence(st)}</div></div>
       <button class="btn soft" data-act="pagarDeuda" data-id="${esc(d.id)}">Pagar</button></div>`;
   }
@@ -464,8 +464,8 @@
       <div class="logo">TU <span>y</span> YO</div>
       <p>El presupuesto de los dos: cada gasto, cada deuda y cada peso que ahorran juntos.</p>
       <div class="menu">
-        <button style="--i:0" data-act="setup"><span class="ico" style="background:var(--lila)">${ICON.heart}</span><span><b>Empezar nuestro presupuesto</b><small>Configura nombres e ingresos en un minuto</small></span></button>
-        <button style="--i:1" data-act="unirme"><span class="ico" style="background:var(--malva)">${ICON.link}</span><span><b>Mi pareja ya lo creó</b><small>Escribe el código de 6 letras que te compartió</small></span></button>
+        <button style="--i:0" data-act="setup"><span class="ico" style="background:var(--azul)">${ICON.heart}</span><span><b>Empezar nuestro presupuesto</b><small>Configura nombres e ingresos en un minuto</small></span></button>
+        <button style="--i:1" data-act="unirme"><span class="ico" style="background:var(--verde)">${ICON.link}</span><span><b>Mi pareja ya lo creó</b><small>Escribe el código de 6 letras que te compartió</small></span></button>
         ${PREVIEW ? `<button style="--i:2" data-act="ejemplo"><span class="ico" style="background:#5B7BE0">${ICON.spark}</span><span><b>Ver con datos de ejemplo</b><small>Una pareja ficticia con gastos, deudas y metas</small></span></button>` : ''}
       </div>
     </div>`;
@@ -493,7 +493,7 @@
     const pres = S.cfg.presupuestos || {};
     const filas = CATS.filter(k => c.porCat[k.id]).map((k, i) => {
       const g = c.porCat[k.id] || 0, p = pres[k.id] || 0, r = p ? g / p : 0;
-      const est = !p ? '<span class="pill lila">sin tope</span>' : r > 1 ? `<span class="pill bad">+${pesos(g - p)}</span>` : r > .85 ? '<span class="pill warn">al límite</span>' : `<span class="pill ok">quedan ${corto(p - g)}</span>`;
+      const est = !p ? '<span class="pill azul">sin tope</span>' : r > 1 ? `<span class="pill bad">+${pesos(g - p)}</span>` : r > .85 ? '<span class="pill warn">al límite</span>' : `<span class="pill ok">quedan ${corto(p - g)}</span>`;
       return `<div class="bar-row" style="--i:${i}"><div class="lbl"><b>${esc(k.n)}</b><span class="num">${pesos(g)}${p ? ' / ' + corto(p) : ''} ${est}</span></div>
         <div class="track"><div style="width:${p ? Math.min(100, r * 100) : 100}%;background:${r > 1 ? 'var(--bad)' : k.c};animation-delay:${i * 50}ms;${!p ? 'opacity:.35' : ''}"></div></div></div>`;
     }).join('');
@@ -503,7 +503,7 @@
     const maxV = Math.max(1, ...datos.map(d => d.g + d.a));
     const cols = datos.map((d, i) => `<div class="col"><div class="stack" title="${esc(nombreMes(d.m))}: gastos ${pesos(d.g)}, ahorro ${pesos(d.a)}">
       <div style="height:${d.a / maxV * 100}%;background:var(--ok);animation-delay:${i * 60}ms"></div>
-      <div style="height:${d.g / maxV * 100}%;background:${d.m === S.mes ? 'var(--lila)' : 'var(--lila-soft)'};animation-delay:${i * 60}ms"></div></div>
+      <div style="height:${d.g / maxV * 100}%;background:${d.m === S.mes ? 'var(--azul)' : 'var(--azul-soft)'};animation-delay:${i * 60}ms"></div></div>
       <small>${esc(nombreMes(d.m, { month: 'short' }).replace('.', ''))}</small></div>`).join('');
     const divRest = c.presDiv - c.divGastado;
 
@@ -533,7 +533,7 @@
     })()}
     ${(() => {
       const rv = S.gastos.filter(x => x.revisar && !oculto(x)).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '')).slice(0, 5);
-      return rv.length ? `<section class="card"><h3>${ICON.chat.replace('<svg', '<svg style="width:18px;height:18px;color:var(--malva)"')} Para hablar juntos</h3><div style="display:grid;gap:10px">${rv.map(x => `<div class="pago-row"><span class="ico" style="background:var(--${x.pagadoPor === 'b' ? 'malva' : 'lila'})">${esc(ini(x.pagadoPor))}</span><div class="t"><b>${esc(descDe(x))} · ${pesos(x.monto)}</b><small>${x.nota ? '«' + esc(x.nota) + '»' : esc(nombreDia(x.fecha))}</small></div><button class="btn ghost" data-act="hablado" data-id="${esc(x.id)}">Ya lo hablamos</button></div>`).join('')}</div></section>` : '';
+      return rv.length ? `<section class="card"><h3>${ICON.chat.replace('<svg', '<svg style="width:18px;height:18px;color:var(--verde)"')} Para hablar juntos</h3><div style="display:grid;gap:10px">${rv.map(x => `<div class="pago-row"><span class="ico" style="background:var(--${x.pagadoPor === 'b' ? 'verde' : 'azul'})">${esc(ini(x.pagadoPor))}</span><div class="t"><b>${esc(descDe(x))} · ${pesos(x.monto)}</b><small>${x.nota ? '«' + esc(x.nota) + '»' : esc(nombreDia(x.fecha))}</small></div><button class="btn ghost" data-act="hablado" data-id="${esc(x.id)}">Ya lo hablamos</button></div>`).join('')}</div></section>` : '';
     })()}
 
     <section class="card">
@@ -556,7 +556,7 @@
         ...S.ingresos.map(x => ({ t: x.creado, por: x.por || x.quien, txt: x.desc || 'Ingreso extra', m: x.monto, mas: true, act: 'editarIngreso', id: x.id }))
       ].filter(x => x.t).sort((a, b) => b.t - a.t).slice(0, 5);
       if (!items.length) return '';
-      return `<section class="card"><h3>${ICON.users.replace('<svg', '<svg style="width:18px;height:18px;color:var(--lila)"')} Lo último de los dos</h3><div class="act">${items.map(x => `<button class="act-row" ${x.act ? `data-act="${x.act}" data-id="${esc(x.id)}"` : 'disabled'}>
+      return `<section class="card"><h3>${ICON.users.replace('<svg', '<svg style="width:18px;height:18px;color:var(--azul)"')} Lo último de los dos</h3><div class="act">${items.map(x => `<button class="act-row" ${x.act ? `data-act="${x.act}" data-id="${esc(x.id)}"` : 'disabled'}>
         <span class="av ${esc(x.por)}">${esc(ini(x.por))}</span><span class="t"><b>${esc(x.txt)}</b><small>${esc(x.por === yo() && S.modo === 'nube' ? 'Tú' : nom(x.por))} · ${esc(haceTiempo(x.t))}</small></span>
         <span class="m num" ${x.mas ? 'style="color:var(--ok)"' : ''}>${x.mas ? '+' : ''}${pesos(x.m)}</span></button>`).join('')}</div></section>`;
     })()}
@@ -564,9 +564,9 @@
     <section class="card">
       <h3>Cuentas claras entre los dos</h3>
       <div class="balance">
-        <span class="av" style="background:var(--${deudor === 'a' ? 'lila' : 'malva'})">${esc(ini(deudor))}</span>
+        <span class="av" style="background:var(--${deudor === 'a' ? 'azul' : 'verde'})">${esc(ini(deudor))}</span>
         <div class="flecha" aria-hidden="true"></div>
-        <span class="av" style="background:var(--${acreedor === 'a' ? 'lila' : 'malva'})">${esc(ini(acreedor))}</span>
+        <span class="av" style="background:var(--${acreedor === 'a' ? 'azul' : 'verde'})">${esc(ini(acreedor))}</span>
       </div>
       <div class="balance-txt">${net === 0 ? '<b>Están a paz y salvo</b><span class="muted">Nadie le debe nada a nadie.</span>'
         : `<span class="muted">${esc(nom(deudor))} le debe a ${esc(nom(acreedor))}</span><b class="num" data-num="${Math.abs(net)}" data-k="bal">${pesos(Math.abs(net))}</b>`}</div>
@@ -579,7 +579,7 @@
 
     ${(() => {
       const pp = plataPersonal(S.mes); if (!pp.a.tope && !pp.b.tope) return '';
-      const barra = p => { const x = pp[p], r = x.tope ? x.usado / x.tope : 0; return `<div class="bar-row"><div class="lbl"><b><span class="dot ${p}"></span>${esc(nom(p))}</b><span class="num muted">${x.tope ? (x.usado <= x.tope ? 'le quedan ' + pesos(x.tope - x.usado) : 'se pasó ' + pesos(x.usado - x.tope)) : pesos(x.usado) + ' sin tope'}</span></div><div class="track"><div style="width:${Math.min(100, r * 100)}%;background:${r > 1 ? 'var(--bad)' : 'var(--' + (p === 'a' ? 'lila' : 'malva') + ')'}"></div></div></div>`; };
+      const barra = p => { const x = pp[p], r = x.tope ? x.usado / x.tope : 0; return `<div class="bar-row"><div class="lbl"><b><span class="dot ${p}"></span>${esc(nom(p))}</b><span class="num muted">${x.tope ? (x.usado <= x.tope ? 'le quedan ' + pesos(x.tope - x.usado) : 'se pasó ' + pesos(x.usado - x.tope)) : pesos(x.usado) + ' sin tope'}</span></div><div class="track"><div style="width:${Math.min(100, r * 100)}%;background:${r > 1 ? 'var(--bad)' : 'var(--' + (p === 'a' ? 'azul' : 'verde') + ')'}"></div></div></div>`; };
       return `<section class="card"><h3>Plata personal <span class="sub">sin dar explicaciones</span></h3><div class="bars">${barra('a')}${barra('b')}</div></section>`;
     })()}
 
@@ -594,7 +594,7 @@
     <section class="card">
       <h3>Termómetro de diversión</h3>
       ${c.presDiv ? `<div class="bar-row"><div class="lbl"><b>${divRest >= 0 ? 'Les quedan ' + pesos(divRest) : 'Se pasaron por ' + pesos(-divRest)}</b><span class="num muted">${pesos(c.divGastado)} / ${pesos(c.presDiv)}</span></div>
-        <div class="track"><div style="width:${Math.min(100, c.divGastado / c.presDiv * 100)}%;background:${divRest < 0 ? 'var(--bad)' : 'linear-gradient(90deg,var(--lila),var(--malva))'}"></div></div></div>
+        <div class="track"><div style="width:${Math.min(100, c.divGastado / c.presDiv * 100)}%;background:${divRest < 0 ? 'var(--bad)' : 'linear-gradient(90deg,var(--azul),var(--verde))'}"></div></div></div>
         <button class="btn ghost full" style="margin-top:12px" data-act="tab" data-tab="ahorro">Ver planes que les alcanzan</button>`
         : `<p class="muted" style="margin:0 0 12px">Pónganle un tope a la diversión y les diremos qué planes les alcanzan sin tocar el ahorro.</p><button class="btn soft full" data-act="ajustes">Definir presupuestos</button>`}
     </section>
@@ -602,7 +602,7 @@
     ${filas ? `<section class="card"><h3>Presupuesto por categoría</h3><div class="bars stagger">${filas}</div></section>` : ''}
 
     <section class="card">
-      <h3>Últimos 6 meses <span class="sub"><span class="dot" style="background:var(--lila)"></span>gastos <span class="dot" style="background:var(--ok);margin-left:6px"></span>ahorro</span></h3>
+      <h3>Últimos 6 meses <span class="sub"><span class="dot" style="background:var(--azul)"></span>gastos <span class="dot" style="background:var(--ok);margin-left:6px"></span>ahorro</span></h3>
       <div class="cols">${cols}</div>
     </section>`;
   }
@@ -646,7 +646,7 @@
         <div><div class="eyebrow">Gastado en el mes</div><div style="font:800 28px var(--f-display)" class="num" data-num="${Math.round(c.gastado)}" data-k="gmes">${pesos(c.gastado)}</div></div>
         <div style="display:flex;gap:8px;flex:none"><button class="btn soft icon-only" data-act="dictar" aria-label="Dictar gasto">${ICON.mic}</button><button class="btn" data-act="escanear">${ICON.cam} Escanear</button></div></div></div>
       <section class="card">
-        <h3>${ICON.repeat.replace('<svg', '<svg style="width:18px;height:18px;color:var(--lila)"')} Gastos fijos del mes <span class="sub">${fijos.length ? (pendFijos.length ? pendFijos.length + ' pendiente' + (pendFijos.length === 1 ? '' : 's') : 'todos pagados') : ''}</span></h3>
+        <h3>${ICON.repeat.replace('<svg', '<svg style="width:18px;height:18px;color:var(--azul)"')} Gastos fijos del mes <span class="sub">${fijos.length ? (pendFijos.length ? pendFijos.length + ' pendiente' + (pendFijos.length === 1 ? '' : 's') : 'todos pagados') : ''}</span></h3>
         ${fijos.length ? `<div class="muted" style="font-size:13px;margin:-6px 0 12px">Suman ${pesos(totFijos)} al mes${subs.length ? ` · ${subs.length} suscripcion${subs.length === 1 ? '' : 'es'}: ${pesos(sum(subs))} al mes, ${pesos(sum(subs) * 12)} al año` : ''}</div>
           <div class="stagger" style="display:grid;gap:10px">${fijos.map((x, i) => filaFijo(x, i)).join('')}</div>`
           : '<p class="muted" style="margin:0 0 4px">Arriendo, servicios, internet, Netflix… anótenlos una vez y cada mes los marcan como pagados con un toque.</p>'}
@@ -698,7 +698,7 @@
           <div class="eyebrow">${esc(tipo)}</div>
           <b>${esc(d.nombre)}</b>
           <div class="muted" style="font-size:13px">${bancoDe(d) ? esc(bancoDe(d)) + ' · ' : ''}<span class="dot ${esc(resp)}"></span>${esc(resp === 'ambos' ? 'Conjunta' : 'De ' + nom(resp))}${d.dia ? ' · paga el día ' + esc(d.dia) : ''}</div>
-          <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${chipVence(st)}${bola && bola.d.id === d.id && activas.length > 1 ? '<span class="pill lila">Liquidar primero</span>' : ''}</div></div>
+          <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${chipVence(st)}${bola && bola.d.id === d.id && activas.length > 1 ? '<span class="pill azul">Liquidar primero</span>' : ''}</div></div>
           ${anillo(st.pct, Math.round(st.pct * 100) + '%')}</div>
         <div class="nums">
           <div><small>Deben hoy</small><b>${corto(st.saldo)}</b></div>
@@ -773,15 +773,15 @@
     const racha = rachaCitas();
     return `
       <section class="card cita-card">
-        <div class="idea"><span class="ico" style="background:var(--malva-soft);color:var(--malva)">${ICON.cup}</span><div>
+        <div class="idea"><span class="ico" style="background:var(--verde-soft);color:var(--verde)">${ICON.cup}</span><div>
           <b>Cita de dinero de ${esc(nombreMes(S.mes, { month: 'long' }))}</b>
           <p>${citaMes ? 'Ya la hicieron. ' + (citaMes.acuerdos ? 'Acuerdos: «' + esc(citaMes.acuerdos.slice(0, 120)) + (citaMes.acuerdos.length > 120 ? '…' : '') + '»' : '') : 'Un resumen del mes y cuatro preguntas para revisar juntos en 15 minutos.'}</p>
-          ${racha ? `<span class="pill lila" style="margin-top:6px">Racha: ${racha} mes${racha === 1 ? '' : 'es'} seguidos</span>` : ''}</div></div>
+          ${racha ? `<span class="pill azul" style="margin-top:6px">Racha: ${racha} mes${racha === 1 ? '' : 'es'} seguidos</span>` : ''}</div></div>
         <button class="btn ${citaMes ? 'ghost' : ''} full" style="margin-top:12px" data-act="cita">${citaMes ? 'Ver resumen y acuerdos' : 'Empezar nuestra cita'}</button>
       </section>
 
       <section class="card">
-        <h3>${ICON.heart.replace('<svg', '<svg style="width:18px;height:18px;color:var(--malva)"')} ¿Nos lo podemos permitir?</h3>
+        <h3>${ICON.heart.replace('<svg', '<svg style="width:18px;height:18px;color:var(--verde)"')} ¿Nos lo podemos permitir?</h3>
         <form data-form="permitir" class="row" style="display:flex;gap:10px">
           <label for="pmonto" class="muted" style="position:absolute;left:-9999px">Valor del plan o compra</label>
           <input id="pmonto" class="input money" inputmode="numeric" placeholder="$0" style="font-size:20px;flex:2;min-width:0" required>
@@ -836,11 +836,11 @@
   function chipFijo(st) {
     if (st.pago) return `<span class="pill ok">Pagado ${fechaCorta(st.pago.fecha)}</span>`;
     if (st.pasado) return '<span class="pill bad">No se registró</span>';
-    if (st.dias == null) return st.fecha ? `<span class="pill lila">El ${fechaCorta(st.fecha)}</span>` : '<span class="pill lila">Pendiente</span>';
+    if (st.dias == null) return st.fecha ? `<span class="pill azul">El ${fechaCorta(st.fecha)}</span>` : '<span class="pill azul">Pendiente</span>';
     if (st.dias < 0) return `<span class="pill bad">Vencido hace ${-st.dias} día${st.dias === -1 ? '' : 's'}</span>`;
     if (st.dias === 0) return '<span class="pill bad">Vence hoy</span>';
     if (st.dias <= 5) return `<span class="pill warn">En ${st.dias} día${st.dias === 1 ? '' : 's'}</span>`;
-    return `<span class="pill lila">El ${fechaCorta(st.fecha)}</span>`;
+    return `<span class="pill azul">El ${fechaCorta(st.fecha)}</span>`;
   }
   function filaFijo(f, i, mes = S.mes) {
     const st = estadoFijo(f, mes), k = CAT[f.categoria] || CAT.otros;
@@ -886,7 +886,7 @@
         <div><small>Patrimonio de ${esc(nom('b'))}</small><b class="num">${pesos(p.b)}</b></div>
       </div>
       <div class="list" style="margin-top:14px">${S.cuentas.slice().sort((a, b) => b.saldo - a.saldo).map((x, i) => `<button class="item" style="--i:${i}" data-act="editarCuenta" data-id="${esc(x.id)}">
-        <span class="ico" style="background:var(--${(x.dueno || 'ambos') === 'b' ? 'malva' : 'lila'})">${ICON.bank}</span>
+        <span class="ico" style="background:var(--${(x.dueno || 'ambos') === 'b' ? 'verde' : 'azul'})">${ICON.bank}</span>
         <span class="t"><b>${esc(x.nombre)}</b><small>${esc(TIPOS_CUENTA[x.tipo] || 'Cuenta')} · ${esc((x.dueno || 'ambos') === 'ambos' ? 'De los dos' : 'De ' + nom(x.dueno))} · ${esc(haceDias(x.actualizado))}</small></span>
         <span class="m">${pesos(x.saldo)}</span></button>`).join('') || '<p class="muted">Agreguen sus cuentas, ahorros, CDT o cesantías.</p>'}</div>
       <button class="btn full" style="margin-top:14px" data-act="nuevaCuenta">Agregar cuenta o bien</button>`;
@@ -1001,7 +1001,7 @@
     for (let i = 0; i < 18; i++) {
       const h = document.createElement('i'); const a = Math.random() * Math.PI * 2, d = 120 + Math.random() * 160;
       h.style.setProperty('--x', Math.cos(a) * d + 'px'); h.style.setProperty('--y', Math.sin(a) * d - 80 + 'px'); h.style.setProperty('--r', (Math.random() * 360 - 180) + 'deg');
-      h.style.color = i % 2 ? 'var(--lila)' : 'var(--malva)'; h.innerHTML = ICON.heart; box.appendChild(h);
+      h.style.color = i % 2 ? 'var(--azul)' : 'var(--verde)'; h.innerHTML = ICON.heart; box.appendChild(h);
     }
     document.body.appendChild(box); setTimeout(() => box.remove(), 1400);
   }
@@ -1106,7 +1106,7 @@
       </form>
       <h3 style="font:700 16px var(--f-display);margin:18px 0 8px">Historial de pagos</h3>
       <div class="list">${lista.map((x, i) => `<button class="item" style="--i:${i}" data-act="editarGasto" data-id="${esc(x.id)}">
-        <span class="ico" style="background:var(--${x.pagadoPor === 'b' ? 'malva' : 'lila'})">${esc(ini(x.pagadoPor))}</span>
+        <span class="ico" style="background:var(--${x.pagadoPor === 'b' ? 'verde' : 'azul'})">${esc(ini(x.pagadoPor))}</span>
         <span class="t"><b>${x.abono ? 'Abono a capital' : 'Pago'} · ${esc(nombreDia(x.fecha))}</b><small>${esc(nom(x.pagadoPor))}${x.interes ? ' · interés ' + pesos(x.interes) + ' · capital ' + pesos(x.capital ?? x.monto) : ''}</small></span>
         <span class="m">${pesos(x.monto)}</span></button>`).join('') || '<p class="muted">Aún no hay pagos registrados.</p>'}</div>
       <div class="row" style="margin-top:14px"><button class="btn ghost" data-act="editarDeuda" data-id="${esc(d.id)}">Editar datos</button>${st.saldo > 0 ? `<button class="btn" data-act="pagarDeuda" data-id="${esc(d.id)}">Registrar pago</button>` : ''}</div>`;
@@ -1441,7 +1441,7 @@
       case 'nuevaDeuda': abrir(formDeuda()); break;
       case 'nuevaMeta': abrir(formMeta()); break;
       case 'nuevoIngreso': abrir(formIngreso()); break;
-      case 'elegirDeuda': abrir(`<h2>¿Qué deuda pagaron?</h2><div class="menu">${S.deudas.filter(d => estadoDeuda(d).saldo > 0).map((d, i) => `<button style="--i:${i}" data-act="pagarDeuda" data-id="${esc(d.id)}"><span class="ico" style="background:var(--lila)">${ICON.card}</span><span><b>${esc(d.nombre)}</b><small>Saldo ${pesos(estadoDeuda(d).saldo)}</small></span></button>`).join('') || '<p class="muted">No hay deudas activas.</p>'}</div>`); break;
+      case 'elegirDeuda': abrir(`<h2>¿Qué deuda pagaron?</h2><div class="menu">${S.deudas.filter(d => estadoDeuda(d).saldo > 0).map((d, i) => `<button style="--i:${i}" data-act="pagarDeuda" data-id="${esc(d.id)}"><span class="ico" style="background:var(--azul)">${ICON.card}</span><span><b>${esc(d.nombre)}</b><small>Saldo ${pesos(estadoDeuda(d).saldo)}</small></span></button>`).join('') || '<p class="muted">No hay deudas activas.</p>'}</div>`); break;
       case 'elegirMeta': abrir(`<h2>¿A qué meta aportan?</h2><div class="menu">${S.metas.map((m, i) => `<button style="--i:${i}" data-act="aportar" data-id="${esc(m.id)}"><span class="ico" style="background:var(--ok)">${ICON.piggy}</span><span><b>${esc(m.nombre)}</b><small>${Math.round(estadoMeta(m).pct * 100)}% logrado</small></span></button>`).join('') || '<p class="muted">Aún no hay metas. Créenlas en Planes.</p>'}</div>`); break;
       case 'editarGasto': { const g = S.gastos.find(x => x.id === id); if (g) abrir(oculto(g) ? `<h2>Gasto personal</h2><p class="muted">${esc(nom(g.tipo))} marcó este gasto como privado: ves el valor (${pesos(g.monto)}), no el detalle.</p>` : formGasto(g)); break; }
       case 'editarDeuda': { const d = S.deudas.find(x => x.id === id); if (d) abrir(formDeuda(d)); break; }
@@ -1509,8 +1509,8 @@
   fab.addEventListener('click', () => {
     if (fab.getAttribute('aria-expanded') === 'true') { cerrar(); return; }
     const op = [
-      ['dictar', ICON.mic, 'var(--malva)', 'Dictar gasto', 'Dilo en voz alta y la app lo anota'],
-      ['escanear', ICON.cam, 'var(--lila)', 'Escanear factura', 'Toma la foto y la app llena el gasto'],
+      ['dictar', ICON.mic, 'var(--verde)', 'Dictar gasto', 'Dilo en voz alta y la app lo anota'],
+      ['escanear', ICON.cam, 'var(--azul)', 'Escanear factura', 'Toma la foto y la app llena el gasto'],
       ['galeria', ICON.img, '#B07A86', 'Factura desde la galería', 'Usa una foto que ya tengas'],
       ['nuevoGasto', ICON.pen, '#5B7BE0', 'Anotar gasto', 'Escribe el valor y la categoría'],
       ['elegirDeuda', ICON.card, '#7A5C99', 'Pagar una deuda', 'Registra quién pagó la cuota'],

@@ -1,6 +1,6 @@
 # TU Y YO
 
-App Android para llevar el presupuesto en pareja: gastos de cada uno y compartidos, deudas (quién pagó cada cuota), ingresos mensuales, metas de ahorro y planes de diversión que les alcanzan sin tocar el ahorro. Colores lila, animaciones y modo oscuro.
+App Android para llevar el presupuesto en pareja: gastos de cada uno y compartidos, deudas (quién pagó cada cuota), ingresos mensuales, metas de ahorro y planes de diversión que les alcanzan sin tocar el ahorro. Colores azul y verde, animaciones y modo oscuro.
 
 ## Descargar la APK
 
@@ -62,6 +62,8 @@ cd android && ./gradlew assembleDebug
 
 El código de la app está en `www/` (HTML, CSS y JavaScript sin compilar). Ver también [SEGURIDAD.md](SEGURIDAD.md).
 
-## Logo
+## Logo y colores
 
-Los archivos están en [`logo/`](logo): `icono.svg` (ícono completo), `simbolo.svg` (solo el símbolo), `simbolo-lila.svg` (versión de un color) y los PNG en 512 y 1024 px. El símbolo es una «Y» formada por dos personas que se unen en un mismo camino, con un techo verde: el hogar que construyen juntos.
+Los archivos están en [`logo/`](logo): `icono.svg` (ícono completo), `simbolo.svg` (solo el símbolo), `simbolo-azul.svg` (versión de un color) y los PNG en 512 y 1024 px.
+
+El símbolo son dos personas, una azul y una verde, que abrazan juntas una moneda de pesos: la plata de los dos. La paleta es para ambos por igual: azul `#3552E8` (confianza), verde `#13B176` (hogar y ahorro), ámbar `#FFB21E` (la moneda) y noche `#0F1B3D` (fondo del ícono y textos).
