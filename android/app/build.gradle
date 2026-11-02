@@ -18,18 +18,25 @@ android {
     }
     signingConfigs {
         release {
+            // Llave privada desde secretos de GitHub si existe; si no, la llave pública del repositorio
+            // (sirve para instalar la APK directamente y actualizarla; para Play Store usa una privada).
             def ks = System.getenv("KEYSTORE_PATH")
             if (ks) {
                 storeFile file(ks)
                 storePassword System.getenv("KEYSTORE_PASSWORD")
                 keyAlias System.getenv("KEY_ALIAS")
                 keyPassword System.getenv("KEY_PASSWORD")
+            } else {
+                storeFile file("firma-publica.jks")
+                storePassword "tuyyo-firma-publica"
+                keyAlias "tuyyo"
+                keyPassword "tuyyo-firma-publica"
             }
         }
     }
     buildTypes {
         release {
-            if (System.getenv("KEYSTORE_PATH")) { signingConfig signingConfigs.release }
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

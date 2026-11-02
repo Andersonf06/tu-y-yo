@@ -55,7 +55,7 @@ jobs:
             echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/tuyyo.jks"
             echo "KEYSTORE_PATH=$RUNNER_TEMP/tuyyo.jks" >> "$GITHUB_ENV"
           else
-            echo "::warning::Sin secreto KEYSTORE_BASE64: la APK no quedará firmada para actualizaciones."
+            echo "Usando la firma pública del repositorio (android/app/firma-publica.jks)."
           fi
 
       - name: Compilar APK
@@ -67,9 +67,9 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          if [ -n "$KEYSTORE_PATH" ]; then ./gradlew assembleRelease --no-daemon; cp app/build/outputs/apk/release/app-release.apk ../TU-Y-YO.apk
-          else ./gradlew assembleDebug --no-daemon; cp app/build/outputs/apk/debug/app-debug.apk ../TU-Y-YO.apk; fi
-          rm -f "$KEYSTORE_PATH"
+          ./gradlew assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk ../TU-Y-YO.apk
+          if [ -n "$KEYSTORE_PATH" ]; then rm -f "$KEYSTORE_PATH"; fi
 
       - uses: actions/upload-artifact@v4
         with:
