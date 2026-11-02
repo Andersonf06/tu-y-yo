@@ -32,21 +32,39 @@
   const plugin = n => (Cap && Cap.Plugins && Cap.Plugins[n]) || null;
   const vibrar = () => { try { plugin('Haptics')?.impact({ style: 'LIGHT' }); } catch { /* opcional */ } };
 
-  const CATS = [
-    { id: 'mercado', n: 'Mercado', c: '#3552E8' },
-    { id: 'hogar', n: 'Hogar y servicios', c: '#5B7BE0' },
-    { id: 'transporte', n: 'Transporte', c: '#2F9FB3' },
-    { id: 'comida', n: 'Comida fuera', c: '#DD8436' },
-    { id: 'diversion', n: 'Diversión', c: '#E2603F' },
-    { id: 'salud', n: 'Salud', c: '#2B9468' },
-    { id: 'ropa', n: 'Ropa y cuidado', c: '#B07A86' },
-    { id: 'mascotas', n: 'Mascotas', c: '#9C7A3C' },
-    { id: 'educacion', n: 'Educación', c: '#6A6FD8' },
-    { id: 'regalos', n: 'Regalos', c: '#D9577A' },
-    { id: 'deudas', n: 'Deudas', c: '#7A5C99' },
-    { id: 'otros', n: 'Otros', c: '#8C8399' }
+  const CATS_BASE = [
+    { id: 'mercado', n: 'Mercado', c: '#3552E8', g: 'nec' },
+    { id: 'hogar', n: 'Hogar y servicios', c: '#5B7BE0', g: 'nec' },
+    { id: 'transporte', n: 'Transporte', c: '#2F9FB3', g: 'nec' },
+    { id: 'comida', n: 'Comida fuera', c: '#DD8436', g: 'gus' },
+    { id: 'diversion', n: 'Diversión', c: '#E2603F', g: 'gus' },
+    { id: 'salud', n: 'Salud', c: '#2B9468', g: 'nec' },
+    { id: 'ropa', n: 'Ropa y cuidado', c: '#B07A86', g: 'gus' },
+    { id: 'mascotas', n: 'Mascotas', c: '#9C7A3C', g: 'nec' },
+    { id: 'educacion', n: 'Educación', c: '#6A6FD8', g: 'nec' },
+    { id: 'regalos', n: 'Regalos', c: '#D9577A', g: 'gus' },
+    { id: 'deudas', n: 'Deudas', c: '#7A5C99', g: 'deu' },
+    { id: 'otros', n: 'Otros', c: '#8C8399', g: 'gus' }
   ];
-  const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+  const PALETA = ['#3552E8', '#13B176', '#E39A00', '#E2603F', '#2F9FB3', '#6A6FD8', '#D9577A', '#9C7A3C', '#0FA3A3', '#C2410C', '#7C3AED', '#65A30D', '#5B7BE0', '#B07A86', '#2B9468', '#8C8399'];
+  const GRUPOS = { nec: 'Necesidad', gus: 'Gusto', aho: 'Ahorro e inversión' };
+  let CATS = CATS_BASE.map(x => ({ ...x }));
+  let CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+  // Las categorías viven en la configuración compartida: los dos ven y editan las mismas.
+  function refrescarCats() {
+    const lista = S.cfg && Array.isArray(S.cfg.categorias) ? S.cfg.categorias : null;
+    let out;
+    if (lista && lista.length) {
+      out = lista.filter(x => x && x.id && x.n).map(x => {
+        const b = CATS_BASE.find(y => y.id === x.id);
+        return { ...(b || {}), ...x, g: (b && b.id === 'deudas') ? 'deu' : (GRUPOS[x.g] ? x.g : (b?.g || 'gus')), custom: !b };
+      });
+      for (const b of CATS_BASE) if (!out.find(x => x.id === b.id)) out.push({ ...b });
+    } else out = CATS_BASE.map(x => ({ ...x }));
+    const d = out.find(x => x.id === 'deudas'); if (d) d.oculta = false;
+    CATS = out; CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+  }
+  const catsVisibles = actual => CATS.filter(k => !k.oculta || k.id === actual);
   const NECESIDADES = ['mercado', 'hogar', 'transporte', 'salud', 'educacion', 'mascotas'];
   const COLS = ['gastos', 'deudas', 'metas', 'aportes', 'ingresos', 'fijos', 'cuentas', 'citas'];
 
@@ -420,6 +438,7 @@
   }
   function pintar() {
     if (S.modo === 'cargando') return;
+    refrescarCats();
     if (!S.cfg || !S.cfg.nombres?.a) { nav.hidden = true; app.innerHTML = vistaBienvenida(); return; }
     nav.hidden = false;
     nav.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-current', b.dataset.tab === S.tab ? 'page' : 'false'));
@@ -491,7 +510,7 @@
     const deudor = net > 0 ? 'b' : 'a', acreedor = otro(deudor);
     // presupuestos
     const pres = S.cfg.presupuestos || {};
-    const filas = CATS.filter(k => c.porCat[k.id]).map((k, i) => {
+    const filas = CATS.filter(k => c.porCat[k.id] || (pres[k.id] && !k.oculta)).map((k, i) => {
       const g = c.porCat[k.id] || 0, p = pres[k.id] || 0, r = p ? g / p : 0;
       const est = !p ? '<span class="pill azul">sin tope</span>' : r > 1 ? `<span class="pill bad">+${pesos(g - p)}</span>` : r > .85 ? '<span class="pill warn">al límite</span>' : `<span class="pill ok">quedan ${corto(p - g)}</span>`;
       return `<div class="bar-row" style="--i:${i}"><div class="lbl"><b>${esc(k.n)}</b><span class="num">${pesos(g)}${p ? ' / ' + corto(p) : ''} ${est}</span></div>
@@ -599,7 +618,9 @@
         : `<p class="muted" style="margin:0 0 12px">Pónganle un tope a la diversión y les diremos qué planes les alcanzan sin tocar el ahorro.</p><button class="btn soft full" data-act="ajustes">Definir presupuestos</button>`}
     </section>
 
-    ${filas ? `<section class="card"><h3>Presupuesto por categoría</h3><div class="bars stagger">${filas}</div></section>` : ''}
+    <section class="card"><h3>Presupuesto por categoría <span class="sub">${(() => { const r = resumenDist(pres); return r.ing ? (r.libre >= 0 ? 'sin asignar ' + corto(r.libre) : 'se pasan ' + corto(-r.libre)) : ''; })()}</span></h3>
+      ${filas ? `<div class="bars stagger">${filas}</div>` : '<p class="muted" style="margin:0">Repartan su ingreso entre categorías para ver cuánto les queda en cada una.</p>'}
+      <button class="btn soft full" style="margin-top:14px" data-act="distribucion">${ICON.target} Ajustar distribución y categorías</button></section>
 
     <section class="card">
       <h3>Últimos 6 meses <span class="sub"><span class="dot" style="background:var(--azul)"></span>gastos <span class="dot" style="background:var(--ok);margin-left:6px"></span>ahorro</span></h3>
@@ -855,7 +876,7 @@
         <div class="field"><label for="fnombre">Nombre</label><input id="fnombre" name="fnombre" class="input" maxlength="40" required value="${esc(f.nombre || '')}" placeholder="Ej: Arriendo, Netflix, Gimnasio"></div>
         <div class="row"><div class="field"><label for="fmonto">Valor aproximado</label>${dinero('fmonto', f.monto, 'required')}</div>
           <div class="field"><label for="fdia">Día del mes</label><input id="fdia" name="fdia" class="input" inputmode="numeric" maxlength="2" value="${esc(f.dia || '')}" placeholder="1 a 31"></div></div>
-        <div class="field"><label for="fcat">Categoría</label><select id="fcat" name="fcat" class="input">${CATS.filter(k => k.id !== 'deudas').map(k => `<option value="${k.id}" ${k.id === (f.categoria || 'hogar') ? 'selected' : ''}>${esc(k.n)}</option>`).join('')}</select></div>
+        <div class="field"><label for="fcat">Categoría</label><select id="fcat" name="fcat" class="input">${catsVisibles(f.categoria).filter(k => k.id !== 'deudas').map(k => `<option value="${k.id}" ${k.id === (f.categoria || 'hogar') ? 'selected' : ''}>${esc(k.n)}</option>`).join('')}</select></div>
         <div class="field"><span class="lab">¿Quién lo paga normalmente?</span>${seg('fpago', quienes(), f.pagadoPor || yo())}</div>
         <div class="field"><span class="lab">¿De quién es?</span>${seg('ftipo', [['compartido', 'De los dos'], ['a', nom('a')], ['b', nom('b')]], f.tipo || 'compartido')}</div>
         <label class="check" for="fsub"><input type="checkbox" id="fsub" name="fsub" ${f.suscripcion ? 'checked' : ''}><span>Es una suscripción (streaming, apps, gimnasio…)</span></label>
@@ -977,6 +998,94 @@
     catch { abrir(`<h2>Movimientos</h2><p class="muted">Selecciona y copia este texto.</p><textarea class="input" readonly style="min-height:260px">${esc(csv)}</textarea>`); }
   }
 
+  /* ---------- Distribución del presupuesto ---------- */
+  function resumenDist(pres, grupoDe = id => CAT[id]?.g || 'gus') {
+    const cfg = S.cfg || cfgBase();
+    const ing = (cfg.ingresos.a || 0) + (cfg.ingresos.b || 0);
+    const g = { nec: 0, gus: 0, aho: 0 };
+    for (const [id, m] of Object.entries(pres || {})) { if (!m || id === 'deudas' || CAT[id]?.oculta) continue; const k = grupoDe(id); g[GRUPOS[k] ? k : 'gus'] += m; }
+    const deu = S.deudas.reduce((a, d) => { const st = estadoDeuda(d); return st.saldo > 0 ? a + Math.min(d.cuota || 0, st.saldo) : a; }, 0);
+    const meta = Math.round(ing * (cfg.metaAhorroPct || 0) / 100);
+    const total = g.nec + g.gus + g.aho + deu + meta;
+    return { ing, ...g, deu, meta, total, libre: ing - total };
+  }
+  let distModo = 'pesos';
+  function vistaDistribucion() {
+    const c = S.cfg, pres = c.presupuestos || {};
+    return `<h2>Distribución del presupuesto</h2>
+      <p class="muted" style="margin-top:-6px">Repartan el ingreso de los dos entre categorías. Pueden renombrarlas, cambiarles el color y el grupo, ocultarlas o crear las suyas.</p>
+      <div id="distResumen" class="dist-resumen"></div>
+      <div class="row" style="align-items:center;margin:12px 0 4px">
+        <button type="button" class="btn soft" data-act="sugerirDist" style="flex:1.3">${ICON.spark} Sugerir 50/30/20</button>
+        <div class="seg" role="radiogroup" aria-label="Ver topes en" style="flex:1"><label><input type="radio" name="distModo" value="pesos" ${distModo === 'pesos' ? 'checked' : ''}><span>$</span></label><label><input type="radio" name="distModo" value="pct" ${distModo === 'pct' ? 'checked' : ''}><span>%</span></label></div>
+      </div>
+      <form data-form="distribucion">
+        <div id="distFilas" class="dist-lista">${CATS.filter(k => k.id !== 'deudas').map(k => filaDist(k, pres[k.id] || 0)).join('')}</div>
+        <div class="dist-fija"><span class="dot" style="background:${CAT.deudas?.c || '#7A5C99'}"></span><span>Cuotas de deudas</span><b class="num" id="distDeu"></b></div>
+        <div class="dist-fija"><span class="dot" style="background:var(--verde)"></span><span>Meta de ahorro (${c.metaAhorroPct || 0}%)</span><b class="num" id="distMeta"></b></div>
+        <button type="button" class="btn ghost full" data-act="nuevaCat" style="margin-top:6px">+ Agregar categoría</button>
+        <button class="btn full">Guardar distribución</button>
+      </form>`;
+  }
+  function filaDist(k, monto) {
+    return `<div class="dist-fila" data-id="${esc(k.id)}" data-c="${esc(k.c)}" data-v="${monto || 0}" ${k.oculta ? 'data-oculta="1"' : ''} ${k.custom ? 'data-custom="1"' : ''}>
+      <button type="button" class="dist-color" data-act="colorCat" style="background:${esc(k.c)}" aria-label="Cambiar color de ${esc(k.n || 'la categoría')}"></button>
+      <input class="input dist-nombre" value="${esc(k.n)}" maxlength="24" placeholder="Nombre" aria-label="Nombre de la categoría">
+      <input class="input dist-monto ${distModo === 'pesos' ? 'money' : ''}" inputmode="numeric" value="${valorDist(monto)}" placeholder="${distModo === 'pesos' ? 'Sin tope' : '0 %'}" aria-label="Tope mensual">
+      <div class="dist-meta">
+        <select class="dist-grupo input" aria-label="Grupo">${Object.entries(GRUPOS).map(([g, n]) => `<option value="${g}" ${k.g === g ? 'selected' : ''}>${n}</option>`).join('')}</select>
+        <span class="dist-pct num"></span>
+        <button type="button" class="dist-quitar" data-act="${k.custom ? 'borrarCat' : 'ocultarCat'}">${k.custom ? 'Eliminar' : (k.oculta ? 'Mostrar' : 'Ocultar')}</button>
+      </div></div>`;
+  }
+  const ingresoMes = () => ((S.cfg?.ingresos?.a || 0) + (S.cfg?.ingresos?.b || 0));
+  function valorDist(m) {
+    if (!m) return '';
+    if (distModo === 'pesos') return pesos(m);
+    const ing = ingresoMes(); return ing ? String(Math.round(m / ing * 1000) / 10).replace('.', ',') : '';
+  }
+  function leerMontoFila(f) {
+    const inp = f.querySelector('.dist-monto');
+    if (distModo === 'pesos') return digitos(inp.value);
+    const exacto = Number(f.dataset.v) || 0;
+    if (inp.value === valorDist(exacto)) return exacto; // sin editar: conserva el valor exacto en pesos
+    const pct =Number(String(inp.value).replace(',', '.').replace(/[^\d.]/g, '')) || 0;
+    return Math.round(ingresoMes() * Math.min(pct, 100) / 100 / 1000) * 1000;
+  }
+  function actualizarDist() {
+    const filas = [...document.querySelectorAll('#distFilas .dist-fila')]; if (!filas.length) return;
+    const ing = ingresoMes(), pres = {}, grupo = {};
+    for (const f of filas) {
+      const id = f.dataset.id, m = leerMontoFila(f); f.dataset.v = m;
+      grupo[id] = f.querySelector('.dist-grupo').value;
+      if (f.dataset.oculta !== '1') pres[id] = m;
+      f.querySelector('.dist-pct').textContent = distModo === 'pesos' ? (ing && m ? (Math.round(m / ing * 1000) / 10).toLocaleString('es-CO') + '%' : '') : (m ? corto(m) : '');
+    }
+    const r = resumenDist(pres, id => grupo[id] || 'gus');
+    $('#distDeu').textContent = pesos(r.deu); $('#distMeta').textContent = pesos(r.meta);
+    const pct = v => r.ing ? Math.round(v / r.ing * 100) : 0;
+    const segs = [['nec', 'var(--azul)', r.nec], ['gus', '#E39A00', r.gus], ['aho', 'var(--verde)', r.aho + r.meta], ['deu', '#7A5C99', r.deu]];
+    const base = Math.max(r.ing, r.total) || 1;
+    $('#distResumen').innerHTML = `
+      <div class="dist-top"><div><small>Ingreso de los dos</small><b class="num">${pesos(r.ing)}</b></div>
+        <div class="${r.libre < 0 ? 'mal' : r.libre === 0 ? 'bien' : ''}"><small>${r.libre < 0 ? 'Se pasan por' : r.libre === 0 ? 'Cada peso asignado' : 'Sin asignar'}</small><b class="num">${pesos(Math.abs(r.libre))}</b></div></div>
+      <div class="dist-barra" role="img" aria-label="Necesidades ${pct(r.nec)}%, gustos ${pct(r.gus)}%, ahorro ${pct(r.aho + r.meta)}%, deudas ${pct(r.deu)}%">${segs.map(([, col, v]) => v ? `<i style="width:${v / base * 100}%;background:${col}"></i>` : '').join('')}</div>
+      <div class="dist-grupos">
+        <span><i style="background:var(--azul)"></i>Necesidades <b>${pct(r.nec)}%</b> <em>guía 50%</em></span>
+        <span><i style="background:#E39A00"></i>Gustos <b>${pct(r.gus)}%</b> <em>guía 30%</em></span>
+        <span><i style="background:var(--verde)"></i>Ahorro <b>${pct(r.aho + r.meta)}%</b> <em>guía 20%</em></span>
+        ${r.deu ? `<span><i style="background:#7A5C99"></i>Deudas <b>${pct(r.deu)}%</b></span>` : ''}
+      </div>
+      ${r.ing ? '' : '<p class="muted" style="margin:8px 0 0;font-size:13px">Escriban los ingresos en Ajustes para ver los porcentajes.</p>'}`;
+  }
+  function cambiarModoDist(m) {
+    const filas = [...document.querySelectorAll('#distFilas .dist-fila')];
+    const vals = filas.map(leerMontoFila);
+    distModo = m;
+    filas.forEach((f, i) => { const inp = f.querySelector('.dist-monto'); inp.classList.toggle('money', m === 'pesos'); inp.placeholder = m === 'pesos' ? 'Sin tope' : '0 %'; inp.value = valorDist(vals[i]); });
+    actualizarDist();
+  }
+
   /* ---------- Hoja inferior ---------- */
   const sheet = $('#sheet'), sheetBody = $('#sheetBody');
   let alCerrar = null, cierreT = null;
@@ -1020,7 +1129,7 @@
       <form data-form="gasto" data-id="${esc(g.id || '')}">
         <div class="field"><label for="gmonto">Valor</label>${dinero('gmonto', g.monto, 'required autofocus')}</div>
         <div class="field"><label for="gdesc">Descripción</label><input id="gdesc" name="gdesc" class="input" maxlength="60" value="${esc(g.desc || '')}" placeholder="Ej: mercado del mes"></div>
-        <div class="field"><span class="lab">Categoría</span><div class="cats">${CATS.map(k => `<label><input type="radio" name="gcat" value="${k.id}" ${k.id === cat ? 'checked' : ''}><i style="background:${k.c}"></i>${esc(k.n)}</label>`).join('')}</div></div>
+        <div class="field"><span class="lab">Categoría</span><div class="cats">${catsVisibles(cat).map(k => `<label><input type="radio" name="gcat" value="${k.id}" ${k.id === cat ? 'checked' : ''}><i style="background:${k.c}"></i>${esc(k.n)}</label>`).join('')}</div></div>
         <div class="field" id="campoDeuda" ${cat === 'deudas' ? '' : 'hidden'}><label for="gdeuda">¿Qué deuda pagaron?</label>
           <select id="gdeuda" name="gdeuda" class="input"><option value="">Ninguna en particular</option>${deudas.map(d => `<option value="${esc(d.id)}" ${d.id === g.deudaId ? 'selected' : ''}>${esc(d.nombre)}</option>`).join('')}</select></div>
         <div class="field"><span class="lab">¿Quién pagó?</span>${seg('gpago', quienes(), g.pagadoPor || yo())}</div>
@@ -1159,9 +1268,8 @@
         ${inicial ? '' : `<div class="row"><div class="field"><label for="ma">Plata personal de ${esc(c.nombres.a || '1')}</label>${dinero('ma', c.mesada?.a)}</div><div class="field"><label for="mb">Plata personal de ${esc(c.nombres.b || '2')}</label>${dinero('mb', c.mesada?.b)}</div></div>
           <small class="muted" style="margin-top:-8px">Un monto al mes para que cada uno gaste en lo suyo sin dar explicaciones. Cuenta los gastos marcados como «de» esa persona.</small>`}
         ${inicial ? '' : `<label class="check" for="rec"><input type="checkbox" id="rec" name="rec" ${c.recordatorios === false ? '' : 'checked'}><span>Avisarme en el celular cuando venzan deudas y gastos fijos</span></label>`}
-        ${inicial ? '' : `<div class="field"><span class="lab">Presupuesto mensual por categoría</span>
-          <button type="button" class="btn soft" data-act="sugerir">${ICON.spark} Sugerir con la regla 50/30/20</button>
-          <div style="display:grid;gap:8px">${CATS.filter(k => k.id !== 'deudas').map(k => `<div style="display:grid;grid-template-columns:1fr 140px;gap:10px;align-items:center"><label for="p_${k.id}" style="font-size:14px;font-weight:600"><span class="dot" style="background:${k.c}"></span>${esc(k.n)}</label><input id="p_${k.id}" name="p_${k.id}" class="input money" style="font-size:16px;padding:9px 12px" inputmode="numeric" value="${p[k.id] ? pesos(p[k.id]) : ''}" placeholder="Sin tope"></div>`).join('')}</div></div>`}
+        ${inicial ? '' : (() => { const r = resumenDist(c.presupuestos || {}); return `<button type="button" class="dist-acceso" data-act="distribucion">
+          <span class="ico" style="background:var(--azul)">${ICON.target}</span><span><b>Distribución del presupuesto</b><small>${CATS.filter(k => !k.oculta && k.id !== 'deudas').length} categorías · ${r.ing ? (r.libre >= 0 ? 'sin asignar ' + pesos(r.libre) : 'se pasan por ' + pesos(-r.libre)) : 'agrega los ingresos'}</small></span>${ICON.right}</button>`; })()}
         <button class="btn full">${inicial ? 'Empezar' : 'Guardar ajustes'}</button>
       </form>
       ${inicial ? '' : `<div style="display:grid;gap:10px;margin-top:18px">
@@ -1363,7 +1471,9 @@
     vibrar();
     const oido = `Entendí: «${esc(frase)}». Revisa y guarda.`;
     if (r.tipo === 'ingreso') { sheetBody.innerHTML = formIngreso({ monto: r.monto, desc: r.desc || 'Ingreso extra', quien: r.quien, fecha: r.fecha }, oido); return; }
-    const g = { monto: r.monto, desc: r.desc, categoria: r.categoria, pagadoPor: r.pagadoPor, tipo: r.de, fecha: r.fecha };
+    const nf0 = VOZ.norm(frase);
+    const propia = CATS.filter(k => !k.oculta && k.id !== 'deudas' && VOZ.norm(k.n).length > 3).sort((a, b) => b.n.length - a.n.length).find(k => new RegExp('\\b' + VOZ.norm(k.n).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(nf0));
+    const g = { monto: r.monto, desc: r.desc, categoria: propia && (propia.custom || r.categoria === 'otros') ? propia.id : r.categoria, pagadoPor: r.pagadoPor, tipo: r.de, fecha: r.fecha };
     if (r.categoria === 'deudas') {
       const nf = VOZ.norm(frase);
       const d = S.deudas.find(x => estadoDeuda(x).saldo > 0 && (VOZ.norm(x.nombre).split(' ').some(w => w.length > 3 && nf.includes(w)) || (bancoDe(x) && nf.includes(VOZ.norm(bancoDe(x)).split(' ')[0]))));
@@ -1459,6 +1569,46 @@
       case 'cita': abrir(vistaCita(S.mes)); break;
       case 'hablado': { const g = S.gastos.find(x => x.id === id); if (!g) break; const d = { ...g }; delete d.id; delete d.revisar; await Store.poner('gastos', id, d); toast('Listo, ya lo hablaron'); break; }
       case 'exportar': try { await exportarCSV(); } catch (err) { console.error(err); toast('No se pudo exportar'); } break;
+      case 'distribucion': distModo = 'pesos'; abrir(vistaDistribucion()); actualizarDist(); break;
+      case 'nuevaCat': {
+        const lista = $('#distFilas'); if (!lista) break;
+        if (lista.children.length >= 40) { toast('Máximo 40 categorías'); break; }
+        const usados = new Set([...lista.children].map(f => f.dataset.c));
+        const col = PALETA.find(x => !usados.has(x)) || PALETA[lista.children.length % PALETA.length];
+        lista.insertAdjacentHTML('beforeend', filaDist({ id: 'c_' + uid().replace(/[^a-z0-9]/gi, ''), n: '', c: col, g: 'gus', custom: true }, 0));
+        const nueva = lista.lastElementChild; nueva.classList.add('nueva'); nueva.querySelector('.dist-nombre').focus(); nueva.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        actualizarDist(); break;
+      }
+      case 'colorCat': {
+        const f = t.closest('.dist-fila'); const i = PALETA.indexOf(f.dataset.c); const col = PALETA[(i + 1) % PALETA.length];
+        f.dataset.c = col; t.style.background = col; break;
+      }
+      case 'ocultarCat': {
+        const f = t.closest('.dist-fila'); const oc = f.dataset.oculta === '1';
+        if (oc) delete f.dataset.oculta; else f.dataset.oculta = '1';
+        t.textContent = oc ? 'Ocultar' : 'Mostrar'; actualizarDist(); break;
+      }
+      case 'borrarCat': {
+        const f = t.closest('.dist-fila'); const idc = f.dataset.id;
+        const usos = S.gastos.filter(x => x.categoria === idc).length + S.fijos.filter(x => x.categoria === idc).length;
+        if (usos) { f.dataset.oculta = '1'; t.dataset.act = 'ocultarCat'; t.textContent = 'Mostrar'; toast(`Tiene ${usos} movimiento${usos === 1 ? '' : 's'}: la ocultamos para no perderlos`); }
+        else f.remove();
+        actualizarDist(); break;
+      }
+      case 'sugerirDist': {
+        const ing = ingresoMes(); if (!ing) { toast('Primero escriban los ingresos en Ajustes'); break; }
+        const r = resumenDist({});
+        const disp = { nec: ing * .5, gus: ing * .3, aho: Math.max(0, ing * .2 - r.meta) };
+        disp.nec = Math.max(0, disp.nec - r.deu);
+        const filas = [...document.querySelectorAll('#distFilas .dist-fila')].filter(f => f.dataset.oculta !== '1');
+        const peso = { mercado: 3, hogar: 5, transporte: 1.6, salud: .7, educacion: .5, mascotas: .3, comida: 2, diversion: 2.6, ropa: 1.6, regalos: 1, otros: 1.5 };
+        const porG = {}; for (const f of filas) { const g = f.querySelector('.dist-grupo').value; (porG[g] = porG[g] || []).push(f); }
+        for (const [g, fs] of Object.entries(porG)) {
+          const tot = fs.reduce((a, f) => a + (peso[f.dataset.id] || 1), 0);
+          for (const f of fs) { const m = Math.round((disp[g] || 0) * (peso[f.dataset.id] || 1) / tot / 10000) * 10000; f.dataset.v = m; f.querySelector('.dist-monto').value = valorDist(m); }
+        }
+        actualizarDist(); toast('50% necesidades, 30% gustos, 20% ahorro. Ajústenlo a su gusto.'); break;
+      }
       case 'verDeuda': { const d = S.deudas.find(x => x.id === id); if (d) abrir(vistaDeuda(d)); break; }
       case 'pedirBorrar': $('#borrarZona').innerHTML = borrarConfirm(t.dataset.col, id); break;
       case 'cancelBorrar': $('#borrarZona').innerHTML = `<button type="button" class="btn danger full" data-act="pedirBorrar" data-col="${esc(t.dataset.col)}" data-id="${esc(id)}">Eliminar</button>`; break;
@@ -1474,13 +1624,6 @@
         const deudor = net > 0 ? 'b' : 'a';
         await Store.poner('gastos', null, { desc: `${nom(deudor)} saldó cuentas`, monto: Math.abs(net), fecha: hoy(), categoria: 'ajuste', pagadoPor: deudor, tipo: otro(deudor), creado: Date.now() });
         vibrar(); confeti(); toast('¡Cuentas saldadas!'); break;
-      }
-      case 'sugerir': {
-        const ing = digitos($('#ia').value) + digitos($('#ib').value);
-        if (!ing) { toast('Primero escribe los ingresos'); break; }
-        const reparto = { mercado: .15, hogar: .22, transporte: .07, salud: .03, educacion: .02, mascotas: .01, comida: .06, diversion: .08, ropa: .05, regalos: .03, otros: .08 };
-        for (const [k, v] of Object.entries(reparto)) { const el = $('#p_' + k); if (el) el.value = pesos(Math.round(ing * v / 10000) * 10000); }
-        $('#meta').value = 20; toast('50% necesidades, 30% gustos, 20% ahorro'); break;
       }
       case 'invitar': {
         try { const cod = await Store.invitacion(); abrir(vistaCodigo(cod)); } catch (err) { console.error(err); toast('No pudimos obtener el código. Revisa tu conexión.'); }
@@ -1532,11 +1675,14 @@
     if (el.name === 'gcat') { const c = $('#campoDeuda'); if (c) c.hidden = el.value !== 'deudas'; }
     if (el.form?.dataset.form === 'pagoDeuda') resumenPago(el.form);
     if (el.classList.contains('code-in') && el.value.length <= 8) { const c = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); el.value = c.length > 3 ? conGuion(c) : c; }
+    if (el.closest && el.closest('#distFilas')) actualizarDist();
     if (el.id === 'buscar') { S.buscar = el.value; const l = $('#listaG'); if (l) l.innerHTML = listaGastos(); }
   });
   document.addEventListener('change', e => {
     if (e.target.name === 'reparto') { const c = $('#campoPct'); if (c) c.hidden = e.target.value !== 'custom'; }
     if (e.target.name === 'dtipo') { const t = e.target.value === 'tarjeta'; $('#campoCupo').hidden = !t; $('#campoPlazo').hidden = t; $('#lblCuota').textContent = t ? 'Pago mínimo o lo que pagan al mes' : 'Cuota mensual'; }
+    if (e.target.name === 'distModo') cambiarModoDist(e.target.value);
+    if (e.target.classList?.contains('dist-grupo')) actualizarDist();
     if (e.target.name === 'gtipo') { const c = $('#campoPriv'); if (c) c.hidden = e.target.value === 'compartido'; }
     if (e.target.name === 'dresp') { const n = $('#notaConjunta'); if (n) n.hidden = e.target.value !== 'ambos'; }
     if (e.target.name === 'ptipo') { const c = $('#campoInt'), f = e.target.form; if (c) c.hidden = e.target.value === 'abono' || Number(f.dataset.i) === 0; }
@@ -1593,6 +1739,19 @@
           if (saldoForm > (prev.saldoInicial || 0)) data.saldoInicial = saldoForm;
         }
         await Store.poner('deudas', id, data); vibrar(); cerrar(); toast('Deuda guardada');
+      } else if (tipo === 'distribucion') {
+        const filas = [...document.querySelectorAll('#distFilas .dist-fila')];
+        const categorias = [], presupuestos = {};
+        for (const f of filas) {
+          const id = f.dataset.id, n = f.querySelector('.dist-nombre').value.trim().slice(0, 24), m = leerMontoFila(f);
+          const base = CATS_BASE.find(b => b.id === id);
+          if (!n && !base) { if (m) { toast('Pónganle nombre a la categoría nueva'); f.querySelector('.dist-nombre').focus(); return; } continue; }
+          categorias.push({ id, n: n || base.n, c: f.dataset.c, g: f.querySelector('.dist-grupo').value, oculta: f.dataset.oculta === '1' });
+          if (m && f.dataset.oculta !== '1') presupuestos[id] = Math.min(m, 1e10);
+        }
+        const d = CATS.find(k => k.id === 'deudas'); if (d) categorias.push({ id: 'deudas', n: d.n, c: d.c, g: 'deu', oculta: false });
+        await Store.guardarCfg({ ...S.cfg, categorias, presupuestos });
+        vibrar(); cerrar(); toast('Distribución guardada');
       } else if (tipo === 'fijo') {
         const dia = Math.round(Number(v('fdia')));
         const data = { nombre: v('fnombre').trim().slice(0, 40), monto: digitos(v('fmonto')), dia: dia >= 1 && dia <= 31 ? dia : null,
@@ -1649,7 +1808,6 @@
         c.pctA = Math.min(100, Math.max(0, Number(v('pcta')) || 50));
         c.metaAhorroPct = Math.min(90, Math.max(0, Number(v('meta')) || 0));
         if (!f.dataset.inicial) { c.recordatorios = !!f.elements.rec?.checked; c.mesada = { a: digitos(v('ma')), b: digitos(v('mb')) }; }
-        if (!f.dataset.inicial) { const p = {}; for (const k of CATS) { const n = digitos(v('p_' + k.id)); if (n) p[k.id] = n; } c.presupuestos = p; }
         if (!c.nombres.a || !c.nombres.b) { toast('Escriban los dos nombres'); return; }
         await Store.guardarCfg(c); vibrar(); cerrar();
         if (f.dataset.inicial) { confeti(); toast('¡Bienvenidos a TU Y YO!'); } else toast('Ajustes guardados');

@@ -24,6 +24,7 @@ Cada cambio que se sube a `main` compila una versión nueva en **Releases**. Com
   - Calendario de pagos con estado (al día, vence en X días, vencida) y recordatorio en el celular el día antes y el día del pago.
   - Deudas conjuntas: dice cuánto le toca a cada uno de la cuota y quién ha pagado; si uno paga de más, queda a su favor en "Cuentas claras".
   - Botón para corregir el saldo con el extracto del banco y el historial de pagos de cada deuda.
+- **Distribución del presupuesto**: crean sus propias categorías (nombre, color y grupo: necesidad, gusto o ahorro), renombran u ocultan las que vienen, ponen el tope de cada una en pesos o en % del ingreso y ven en vivo cuánto queda sin asignar y cómo van frente a la guía 50/30/20, contando cuotas de deudas y meta de ahorro.
 - **Gastos fijos y suscripciones**: arriendo, servicios, Netflix, gimnasio… se anotan una vez y cada mes se marcan como pagados con un toque. Avisos el día que toca pagar y cuánto cuestan las suscripciones al año.
 - **Notas y "para hablar juntos"**: cualquier gasto puede llevar una nota o marcarse para conversarlo; aparece en Inicio hasta que digan "ya lo hablamos".
 - **Gastos privados**: un gasto personal puede marcarse como privado (por ejemplo, un regalo sorpresa). La pareja ve el valor pero no el detalle. Es discreción en la pantalla, no cifrado.
