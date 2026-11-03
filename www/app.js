@@ -485,10 +485,15 @@
     }, 0);
     // Lo pagado con el ahorro de una meta no castiga el libre del mes.
     const libre = ingresos - (gastado - financiado) - ahorro;
-    const libreReal = libre - Math.max(0, metaAhorro - ahorro) - (esActual ? cuotasPend : 0) - fijosPend;
+    // Nada programado se descuenta hasta que alguno de los dos confirme el pago (o el aporte).
+    // Lo programado se informa aparte: «si pagan todo, quedarían…».
+    const metaPend = esActual ? Math.max(0, metaAhorro - ahorro) : 0;
+    const programado = metaPend + (esActual ? cuotasPend : 0) + fijosPend;
+    const libreReal = libre;
+    const libreSiPagan = libre - programado;
     const presDiv = cfg.presupuestos.diversion || 0;
     const divGastado = porCat.diversion || 0;
-    return { g, ingresos, porCat, gastado, ahorro, aportesMes, ahorroCat, financiado, fijosPend, metaAhorro, pagadoPor, cuotasPend, libre, libreReal, presDiv, divGastado, extras };
+    return { g, ingresos, porCat, gastado, ahorro, aportesMes, ahorroCat, financiado, fijosPend, metaAhorro, metaPend, programado, libreSiPagan, pagadoPor, cuotasPend, libre, libreReal, presDiv, divGastado, extras };
   }
   function balance() {
     let netA = 0;
@@ -707,7 +712,11 @@
       <div class="nota">Con los ingresos de los dos calculamos cuánto les queda libre, cuánto ahorrar y cuánto le toca a cada uno.</div>
       <button class="btn hero-btn" data-act="ajustes">${ICON.up} Agregar ingresos</button>` : `<div class="eyebrow">${libreTxt}</div>
       <div class="big num" data-num="${Math.abs(Math.round(c.libreReal))}" data-k="libre">${pesos(Math.abs(c.libreReal))}</div>
-      <div class="nota">${(() => { const qu = []; if (c.metaAhorro > 0) qu.push(`la meta de ahorro (${esc(S.cfg.metaAhorroPct)}%)`); if (esHoyMes && c.cuotasPend > 0) qu.push('las cuotas pendientes'); if (c.fijosPend > 0) qu.push(`los fijos que faltan (${corto(c.fijosPend)})`); return qu.length ? 'Ya descontamos ' + qu.join(', ').replace(/, ([^,]*)$/, ' y $1') + '.' : 'Configura una meta de ahorro en ajustes.'; })()}</div>`}
+      <div class="nota">${(() => {
+        if (!esHoyMes || c.programado <= 0) return 'Solo descontamos lo que ya confirmaron como pagado.';
+        const qu = []; if (c.fijosPend > 0) qu.push('fijos ' + corto(c.fijosPend)); if (c.cuotasPend > 0) qu.push('cuotas ' + corto(c.cuotasPend)); if (c.metaPend > 0) qu.push('ahorro ' + corto(c.metaPend));
+        return `Solo descontamos lo ya pagado. Tienen ${pesos(c.programado)} programado por pagar (${qu.join(', ')}): si lo pagan todo, ${c.libreSiPagan >= 0 ? 'quedarían ' + pesos(c.libreSiPagan) : 'faltarían ' + pesos(-c.libreSiPagan)}.`;
+      })()}</div>`}
       <div class="stats">
         <div class="stat"><span>Ingresos</span><b class="num">${corto(c.ingresos)}</b></div>
         <div class="stat"><span>Gastado</span><b class="num">${corto(c.gastado)}</b></div>
@@ -1109,8 +1118,10 @@
     const divRest = c.presDiv ? c.presDiv - c.divGastado : null;
     const libre = c.libreReal;
     if (monto <= 0) return '';
-    if (divRest != null && monto <= divRest && monto <= libre) return `<div class="verdict ok">Sí, se lo pueden dar.<small>Les quedarían ${pesos(divRest - monto)} para diversión y la meta de ahorro sigue intacta.</small></div>`;
-    if (divRest == null && monto <= libre) return `<div class="verdict ok">Sí, alcanza.<small>Les quedarían ${pesos(libre - monto)} libres después de ahorrar y pagar cuotas.</small></div>`;
+    if (divRest != null && monto <= divRest && monto <= libre - (c.programado || 0)) return `<div class="verdict ok">Sí, se lo pueden dar.<small>Les quedarían ${pesos(divRest - monto)} para diversión y la meta de ahorro sigue intacta.</small></div>`;
+    const prog = c.programado || 0;
+    if (monto <= libre && monto > libre - prog) return `<div class="verdict warn">Hoy alcanza, pero tienen ${pesos(prog)} programado por pagar.<small>Si lo compran y luego pagan fijos, cuotas y ahorro del mes, ${libre - prog - monto >= 0 ? 'les quedarían ' + pesos(libre - prog - monto) : 'les faltarían ' + pesos(monto - (libre - prog))}. Revisen qué falta pagar antes de decidir.</small></div>`;
+    if (divRest == null && monto <= libre) return `<div class="verdict ok">Sí, alcanza.<small>Les quedarían ${pesos(libre - monto)} libres, y aun así cubren lo que tienen programado por pagar.</small></div>`;
     if (monto <= libre) return `<div class="verdict warn">Alcanza, pero se pasan del presupuesto de diversión.<small>Excede el tope por ${pesos(monto - Math.max(0, divRest))}. Sale del margen libre (${pesos(libre)}); su ahorro no se toca.</small></div>`;
     const falta = monto - Math.max(0, libre);
     const semanal = Math.max(20000, Math.round((c.ingresos * .05 / 4.3) / 1000) * 1000);

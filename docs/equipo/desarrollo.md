@@ -125,3 +125,10 @@ allow delete: if signedIn() && request.auth.uid in resource.data.members;
 ### Contraste pedido por el gerente (`gerente.md`)
 
 `.pill.ok` en claro `#0A6E44`, `.pill.bad` con `--bad-ink` (`#B4232F` claro / `#F2707F` oscuro), y la persona azul (`.av.a` e íconos con fondo azul) sobre `--azul-btn`. Medido con Playwright (`t-contraste.py`) en Inicio, Gastos, Deudas, Planes, historial de deuda, menú de fijo, Logros y Vincular. Mínimos en claro: verde 5,13:1, roja 5,17:1, ámbar 4,91:1, inicial A 5,96:1, inicial B 5,16:1. En oscuro: verde 6,03:1, roja 4,80:1, ámbar 6,24:1, inicial A 4,53:1, inicial B 7,94:1. Se volvieron a correr `t10.py` (56/56), `t-vinc2.py` (25/25) y `t-aud3.py` (`window.__xss` indefinido).
+
+## Ajuste del dueño (2026-11-03): nada programado se descuenta antes de pagar
+
+- "Les quedan libres" = ingresos − gastos registrados (sin lo pagado con ahorro de metas) − aportes registrados. Ya no resta por adelantado fijos pendientes, cuotas del mes ni la meta de ahorro no aportada.
+- Lo programado se muestra aparte en la tarjeta principal: "Tienen $X programado por pagar (fijos, cuotas, ahorro): si lo pagan todo, quedarían $Y".
+- "¿Nos lo podemos permitir?" responde con lo libre confirmado, pero avisa cuando la compra dejaría sin cubrir lo programado.
+- Pruebas: t-prog.py (el libre baja exactamente el valor del fijo solo al confirmar el pago), t10.py 56/56, t-vinc2.py 25/25, t-aud3.py sin XSS.
