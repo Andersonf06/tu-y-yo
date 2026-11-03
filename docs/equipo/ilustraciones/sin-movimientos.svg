@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" role="img" aria-label="sin movimientos"><ellipse cx="120" cy="142" rx="92" ry="10" fill="var(--surface-2, #E9EEF7)"/>
+<rect x="132" y="26" width="64" height="88" rx="10" fill="#fff" stroke="var(--line, #DCE3EF)" stroke-width="2" transform="rotate(8 164 70)"/>
+<g transform="rotate(8 164 70)" stroke="var(--line, #DCE3EF)" stroke-width="4" stroke-linecap="round"><path d="M146 48h36M146 62h28M146 76h34M146 96h20"/></g>
+<path d="M150 112 l6 -6 6 6 6 -6 6 6 6 -6 6 6" fill="none" stroke="var(--line, #DCE3EF)" stroke-width="2" transform="rotate(8 164 70)"/>
+<g transform="translate(30 46) scale(1)">
+<circle cx="28" cy="22" r="11" fill="var(--azul, #3552E8)"/><circle cx="72" cy="22" r="11" fill="var(--verde, #13B176)"/>
+<path d="M15 84 L15 58 C15 46 21 40 28 40 C34 40 38 43 40 48" fill="none" stroke="var(--azul, #3552E8)" stroke-width="12" stroke-linecap="round"/>
+<path d="M85 84 L85 58 C85 46 79 40 72 40 C66 40 62 43 60 48" fill="none" stroke="var(--verde, #13B176)" stroke-width="12" stroke-linecap="round"/>
+<circle cx="50" cy="62" r="15" fill="var(--ambar-logo, #FFB21E)"/><path d="M50 54 V70 M54 57 C53 55 46 55 46 58.5 C46 62 54 61 54 64.5 C54 68 47 68 45.6 66" fill="none" stroke="#B86E00" stroke-width="2.6" stroke-linecap="round"/></g>
+<g fill="var(--ambar-logo, #FFB21E)"><circle cx="208" cy="30" r="5"/><circle cx="20" cy="40" r="3.5"/></g></svg>

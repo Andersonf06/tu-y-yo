@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" role="img" aria-label="sin fijos"><ellipse cx="120" cy="142" rx="92" ry="10" fill="var(--surface-2, #E9EEF7)"/>
+<rect x="126" y="28" width="90" height="94" rx="12" fill="#fff" stroke="var(--line, #DCE3EF)" stroke-width="2"/>
+<rect x="126" y="28" width="90" height="22" rx="12" fill="var(--azul, #3552E8)"/><rect x="126" y="40" width="90" height="10" fill="var(--azul, #3552E8)"/>
+<g fill="var(--line, #DCE3EF)"><rect x="136" y="60" width="12" height="10" rx="3"/><rect x="155" y="60" width="12" height="10" rx="3"/><rect x="174" y="60" width="12" height="10" rx="3"/><rect x="193" y="60" width="12" height="10" rx="3"/><rect x="136" y="78" width="12" height="10" rx="3"/><rect x="155" y="78" width="12" height="10" rx="3"/><rect x="174" y="78" width="12" height="10" rx="3"/><rect x="193" y="78" width="12" height="10" rx="3"/><rect x="136" y="96" width="12" height="10" rx="3"/><rect x="155" y="96" width="12" height="10" rx="3"/><rect x="174" y="96" width="12" height="10" rx="3"/><rect x="193" y="96" width="12" height="10" rx="3"/></g>
+<rect x="155" y="78" width="12" height="10" rx="3" fill="var(--verde, #13B176)"/>
+<path d="M200 118 a16 16 0 1 1 -6 -26" fill="none" stroke="var(--verde, #13B176)" stroke-width="4" stroke-linecap="round"/><path d="M190 88 l6 4 -4 6" fill="none" stroke="var(--verde, #13B176)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<g transform="translate(14 46) scale(1)">
+<circle cx="28" cy="22" r="11" fill="var(--azul, #3552E8)"/><circle cx="72" cy="22" r="11" fill="var(--verde, #13B176)"/>
+<path d="M15 84 L15 58 C15 46 21 40 28 40 C34 40 38 43 40 48" fill="none" stroke="var(--azul, #3552E8)" stroke-width="12" stroke-linecap="round"/>
+<path d="M85 84 L85 58 C85 46 79 40 72 40 C66 40 62 43 60 48" fill="none" stroke="var(--verde, #13B176)" stroke-width="12" stroke-linecap="round"/>
+<circle cx="50" cy="62" r="15" fill="var(--ambar-logo, #FFB21E)"/><path d="M50 54 V70 M54 57 C53 55 46 55 46 58.5 C46 62 54 61 54 64.5 C54 68 47 68 45.6 66" fill="none" stroke="#B86E00" stroke-width="2.6" stroke-linecap="round"/></g></svg>
