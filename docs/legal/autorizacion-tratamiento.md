@@ -9,8 +9,8 @@ Texto para mostrar **antes** de usar la app y antes de unirse a un hogar. La cas
 TU Y YO guarda lo que ustedes registren: nombres, ingresos, gastos, deudas, metas y cuentas. Lo usamos solo para mostrarles su presupuesto y, si se vinculan, para compartirlo entre los dos. No hay publicidad, no vendemos datos y no es asesoría financiera.
 
 - Si se vinculan, los datos se guardan en Google Firebase, con servidores en Estados Unidos, y **tu pareja verá y podrá editar todo lo del hogar**.
-- Las fotos de facturas se leen en el celular y no se suben. Del dictado solo llega el texto.
-- Puedes consultar, corregir, exportar o eliminar tus datos cuando quieras en Ajustes → Privacidad y legal, o escribiendo a [CORREO DE CONTACTO].
+- Las fotos de facturas se leen en el celular y no se suben. El dictado lo hace el servicio de voz de Google, que puede procesar el audio en sus servidores; a la app solo llega el texto.
+- Puedes consultar, corregir, exportar o eliminar tus datos cuando quieras en Ajustes → Privacidad y legal, o escribiendo a anderson.anderson.hernandez@gmail.com.
 - Registrar gastos de salud u otros datos sensibles es opcional.
 
 ☐ **Soy mayor de 18 años, leí y acepto la [Política de Tratamiento de Datos] y los [Términos y Condiciones], y autorizo el tratamiento de mis datos para estas finalidades, incluida su transmisión a Google Firebase en Estados Unidos.** *(obligatoria)*
@@ -31,4 +31,4 @@ Tú y tu pareja verán y podrán editar todos los gastos, deudas, metas, cuentas
 
 ## Qué guardar como prueba de la autorización
 
-Por cada persona, guarda: `{ version: '2026-11-02', fecha: <ISO>, persona: 'a'|'b', mayorEdad: true, terceros: true|false }`. Guárdalo en el celular y, si están vinculados, en el hogar (`cfg.consentimientos.a` / `cfg.consentimientos.b`). Si cambia la versión, la app debe pedir aceptar de nuevo.
+Por cada persona, guarda: `{ version: '2026-11-03', fecha: <ISO>, persona: 'a'|'b', mayorEdad: true, terceros: true|false }`. Guárdalo en el celular y, si están vinculados, en el hogar (`cfg.consentimientos.a` / `cfg.consentimientos.b`). Si cambia la versión, la app debe pedir aceptar de nuevo.

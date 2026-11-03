@@ -59,6 +59,18 @@ Si algún día quieres usar otro proyecto:
 
 Si no se configura `FIREBASE_CONFIG`, la app sigue funcionando sola en cada celular y, al vincular, pide pegar el `firebaseConfig` a mano.
 
+## Privacidad y legal
+
+TU Y YO no tiene publicidad, no vende datos y no usa analítica. Los textos legales (Ley 1581 de 2012) están en [`docs/legal`](docs/legal):
+
+- [Política de Tratamiento de Datos](docs/legal/politica-de-privacidad.md)
+- [Términos y Condiciones](docs/legal/terminos-y-condiciones.md)
+- [Autorización de tratamiento](docs/legal/autorizacion-tratamiento.md)
+- [Cómo eliminar tus datos](docs/legal/eliminacion-de-datos.md)
+- [Formulario de Seguridad de los datos de Google Play](docs/legal/google-play-seguridad-datos.md)
+
+En la app: **Ajustes → Privacidad y legal** (política, términos, autorizaciones, exportar y **Eliminar mis datos** de este celular o de todo el hogar).
+
 ## Desarrollo
 
 ```bash

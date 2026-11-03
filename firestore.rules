@@ -5,6 +5,25 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function hogar(hid) { return get(/databases/$(database)/documents/hogares/$(hid)).data; }
     function isMember(hid) { return signedIn() && request.auth.uid in hogar(hid).members; }
+    // Tipos de la configuración compartida (defensa en profundidad; la app también los valida).
+    function cfgOk(c) {
+      return c is map
+        && (!('metaAhorroPct' in c) || c.metaAhorroPct is number)
+        && (!('pctA' in c) || c.pctA is number)
+        && (!('nombres' in c) || c.nombres is map)
+        && (!('ingresos' in c) || c.ingresos is map)
+        && (!('mesada' in c) || c.mesada is map)
+        && (!('presupuestos' in c) || c.presupuestos is map)
+        && (!('categorias' in c) || c.categorias is list)
+        && (!('logros' in c) || c.logros is map)
+        && (!('consentimientos' in c) || c.consentimientos is map);
+    }
+    function numONulo(d, k) { return !(k in d) || d[k] == null || d[k] is number; }
+    function numerosOk(d) {
+      return numONulo(d, 'cuota') && numONulo(d, 'saldoInicial') && numONulo(d, 'saldoActual') && numONulo(d, 'cupo')
+        && numONulo(d, 'tasa') && numONulo(d, 'dia') && numONulo(d, 'plazo') && numONulo(d, 'cuotasPrevias')
+        && numONulo(d, 'objetivo') && numONulo(d, 'saldo') && numONulo(d, 'interes') && numONulo(d, 'capital');
+    }
     function colOk(col) { return col in ['gastos', 'deudas', 'metas', 'aportes', 'ingresos', 'fijos', 'cuentas', 'citas']; }
 
     match /hogares/{hid} {
@@ -16,13 +35,15 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.members == [request.auth.uid]
         && request.resource.data.joinToken is string
-        && request.resource.data.joinToken.size() == 36;
+        && request.resource.data.joinToken.size() == 36
+        && (!('cfg' in request.resource.data) || cfgOk(request.resource.data.cfg));
 
       allow update: if
         // 1. Cualquiera de los dos cambia la configuración (mismo control para ambos), sin tocar miembros ni token.
         (signedIn() && request.auth.uid in resource.data.members
           && request.resource.data.members == resource.data.members
-          && request.resource.data.joinToken == resource.data.joinToken)
+          && request.resource.data.joinToken == resource.data.joinToken
+          && (!('cfg' in request.resource.data) || cfgOk(request.resource.data.cfg)))
         // 2. Unirse: quien conoce el token se agrega a sí mismo; máximo 2 personas.
         || (signedIn()
           && resource.data.members.size() < 2
@@ -38,7 +59,8 @@ service cloud.firestore {
           && request.resource.data.joinToken != resource.data.joinToken
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'joinToken']));
 
-      allow delete: if false;
+      // Eliminar mis datos → «todo el hogar»: cualquiera de los dos miembros puede borrar el hogar.
+      allow delete: if signedIn() && request.auth.uid in resource.data.members;
 
       // Datos del hogar: solo los miembros, solo colecciones conocidas, documentos pequeños.
       match /{col}/{docId} {
@@ -47,7 +69,8 @@ service cloud.firestore {
           && isMember(hid)
           && request.resource.data.keys().size() <= 30
           && (!('monto' in request.resource.data) || (request.resource.data.monto is number && request.resource.data.monto >= 0 && request.resource.data.monto < 10000000000))
-          && (!('por' in request.resource.data) || request.resource.data.por in ['a', 'b']);
+          && (!('por' in request.resource.data) || request.resource.data.por in ['a', 'b'])
+          && numerosOk(request.resource.data);
       }
     }
 

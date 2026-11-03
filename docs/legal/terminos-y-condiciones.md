@@ -1,8 +1,8 @@
 # Términos y Condiciones de Uso de TU Y YO
 
-**Versión:** 2026-11-02
+**Versión:** 2026-11-03
 
-Al aceptar estos términos en la app, celebras un acuerdo por medios electrónicos, válido según la Ley 527 de 1999, con Anderson Hernández, persona natural en Colombia y responsable de TU Y YO (contacto: [CORREO DE CONTACTO]).
+Al aceptar estos términos en la app, celebras un acuerdo por medios electrónicos, válido según la Ley 527 de 1999, con Anderson Hernández, persona natural en Colombia y responsable de TU Y YO (contacto: anderson.anderson.hernandez@gmail.com).
 
 ## 1. Qué es el servicio
 
@@ -57,4 +57,4 @@ Estos términos pueden actualizarse. Si el cambio es importante, la app lo avisa
 
 ## 11. Ley aplicable y reclamos
 
-Estos términos se rigen por las leyes de Colombia. Para dudas o reclamos escribe a [CORREO DE CONTACTO]. También puedes acudir a la Superintendencia de Industria y Comercio.
+Estos términos se rigen por las leyes de Colombia. Para dudas o reclamos escribe a anderson.anderson.hernandez@gmail.com. También puedes acudir a la Superintendencia de Industria y Comercio.

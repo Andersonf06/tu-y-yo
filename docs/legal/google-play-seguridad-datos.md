@@ -42,3 +42,12 @@ Para todos los tipos: **recopilado** = sí (solo si se vinculan; sin vincular se
 ## Declaración de app financiera (Play Console → Contenido de la app → Funciones financieras)
 
 Marcar **"Mi app no ofrece funciones financieras reguladas"** o la opción equivalente a "seguimiento y presupuesto personal". La app no presta servicios bancarios, de préstamos, de pagos ni de inversión.
+
+
+## Permisos declarados (con su finalidad)
+
+| Permiso | Finalidad | ¿Sale del celular? |
+|---|---|---|
+| Cámara / fotos | Escanear facturas para llenar un gasto | No: la foto se procesa en el celular |
+| Micrófono | Dictar gastos | El servicio de voz de Google puede procesar el audio; a la app solo llega el texto y no se guarda audio |
+| Notificaciones | Recordatorios locales de pagos, sin nombres ni montos por defecto | No |

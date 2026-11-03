@@ -1,13 +1,13 @@
 # Política de Tratamiento de Datos Personales de TU Y YO
 
-**Versión:** 2026-11-02 · **Vigente desde:** 2 de noviembre de 2026
+**Versión:** 2026-11-03 · **Vigente desde:** 3 de noviembre de 2026
 
 Esta política explica qué datos personales trata la aplicación TU Y YO, para qué, dónde se guardan y cómo puedes ejercer tus derechos. Se expide en cumplimiento de la Ley 1581 de 2012, el Decreto 1377 de 2013 (compilado en el Decreto 1074 de 2015) y demás normas colombianas sobre protección de datos personales.
 
 ## 1. Responsable del tratamiento
 
-- **Responsable:** Anderson Hernández, persona natural, domiciliado en [CIUDAD], Colombia.
-- **Correo para consultas, reclamos y solicitudes:** [CORREO DE CONTACTO]
+- **Responsable:** Anderson Hernández, persona natural, domiciliado en Barrancabermeja (Santander), Colombia.
+- **Correo para consultas, reclamos y solicitudes:** anderson.anderson.hernandez@gmail.com
 - **Aplicación:** TU Y YO (Android), código fuente público en github.com/Andersonf06/tu-y-yo.
 
 ## 2. Qué es TU Y YO
@@ -23,13 +23,24 @@ Todos los datos los escriben, dictan o fotografían los propios usuarios. La app
 - **Datos de uso del hogar:** quién registró o editó cada movimiento y en qué momento.
 - **Identificador técnico:** un identificador anónimo que Google Firebase asigna a cada celular cuando la pareja se vincula. No se pide correo, teléfono ni contraseña.
 - **Fotos de facturas:** se procesan **solo en el celular** para leer el texto. La foto **no se sube** ni se guarda en la nube; solo se guardan el valor, la fecha, el comercio y los productos que el usuario confirma.
-- **Voz:** el dictado usa el servicio de reconocimiento de voz del celular (Google). A la app solo llega el texto; **no se guarda audio**.
+- **Voz:** el dictado usa el servicio de reconocimiento de voz de Google del celular, que puede procesar el audio en servidores de Google conforme a su propia política. A la app solo llega el texto; **TU Y YO no graba ni guarda audio**.
+- **Progreso y logros:** insignias, nivel y puntos (XP), rachas y retos que la app calcula con lo que registran; se guardan en el hogar compartido.
+- **Registro de autorizaciones:** versión y fecha en que cada uno aceptó esta política; ambos pueden verlo en Ajustes → Privacidad y legal → Mis autorizaciones.
+- **Conversaciones pendientes:** quién marcó un gasto «para hablar juntos», quién confirmó que ya lo hablaron y cuándo.
 
 **Datos sensibles:** la app no pide datos sensibles (art. 5 Ley 1581). Sin embargo, algunos gastos que el usuario registre voluntariamente (por ejemplo, de salud) podrían revelar información de ese tipo. Registrarlos es **facultativo**: nadie está obligado a anotar ese tipo de gastos.
 
 **Datos de la otra persona:** quien empieza el presupuesto puede escribir el nombre y los ingresos de su pareja. Quien lo hace declara contar con la autorización de esa persona. Cuando la pareja se vincula desde su celular, da su propia autorización.
 
 **Menores de edad:** la app está dirigida a **mayores de 18 años**. No se recogen datos de niños, niñas ni adolescentes de forma intencional.
+
+## Permisos del celular
+
+- **Cámara y fotos:** solo cuando escaneas una factura; la foto se procesa en el celular y no se sube.
+- **Micrófono:** solo mientras dictas (ver «Voz»).
+- **Notificaciones:** recordatorios locales de pagos; por defecto no muestran nombres ni montos.
+- **Internet:** para sincronizar con tu pareja y descargar una vez el lector de facturas.
+- Puedes quitar cualquier permiso en los ajustes de Android; la app sigue funcionando sin él.
 
 ## 4. Para qué se usan los datos (finalidades)
 
@@ -76,7 +87,7 @@ Como titular tienes derecho a (art. 8 Ley 1581):
 ## 9. Cómo ejercer tus derechos
 
 - **Desde la app:** Ajustes → Privacidad y legal. Ahí puedes ver esta política, exportar tus movimientos y usar **Eliminar mis datos**.
-- **Por correo:** escribe a [CORREO DE CONTACTO] con tu nombre, la solicitud, el código o nombre del hogar si lo conoces, y un medio de respuesta.
+- **Por correo:** escribe a anderson.anderson.hernandez@gmail.com con tu nombre, la solicitud, el código o nombre del hogar si lo conoces, y un medio de respuesta.
 
 **Plazos legales:**
 - **Consultas:** se responden en máximo **10 días hábiles**. Si no es posible, se te avisará el motivo y la nueva fecha, que no superará **5 días hábiles** adicionales (art. 14 Ley 1581).
@@ -86,6 +97,7 @@ Como titular tienes derecho a (art. 8 Ley 1581):
 
 - Los datos se conservan mientras uses la app y mientras el hogar exista.
 - Si usas **Eliminar mis datos**, se borran los datos del celular y, si estás vinculado, los del hogar compartido en la nube. Esto también los borra para tu pareja, y la app pide confirmación antes de hacerlo.
+- Al eliminar tus datos también se borra el registro de tu autorización.
 - Si solo desinstalas la app, los datos del hogar en la nube **no se borran automáticamente**: tu pareja los sigue viendo. Para borrarlos usa la opción de la app o escribe al correo de contacto.
 - Las copias que Google conserva por razones técnicas se eliminan según sus plazos de servicio.
 

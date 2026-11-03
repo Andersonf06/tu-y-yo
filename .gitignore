@@ -13,3 +13,7 @@ android/app/build/
 android/build/
 android/.gradle/
 .DS_Store
+
+# Capturas: solo las finales optimizadas
+docs/equipo/capturas/*.png
+!docs/equipo/capturas/final-*.png

@@ -15,7 +15,7 @@ El borrado en la app es inmediato. Las copias de seguridad técnicas de Google s
 
 ## Opción 2: por correo (si ya no tienes la app)
 
-Escribe a **[CORREO DE CONTACTO]** con el asunto "Eliminar mis datos TU Y YO". Incluye:
+Escribe a **anderson.anderson.hernandez@gmail.com** con el asunto "Eliminar mis datos TU Y YO". Incluye:
 - tu nombre,
 - el nombre de tu pareja tal como aparece en la app,
 - un dato que permita identificar el hogar (por ejemplo, el mes en que empezaron o un gasto reciente).
