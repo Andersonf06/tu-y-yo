@@ -1,8 +1,40 @@
 # Informe del gerente: visto bueno de TU Y YO v1.1
 
-Fecha: 3 de noviembre de 2026. Versión revisada: commits locales `1dde84f` y `076e756` (árbol limpio, sin publicar).
+Fecha: 3 de noviembre de 2026. Versión revisada: commit local `26197b3` (enmienda de `1dde84f`) sobre `076e756`, sin publicar.
 
-## VEREDICTO: NO APROBADO (falta poco)
+## VEREDICTO FINAL: VISTO BUENO
+
+Segunda revisión, sobre `26197b3`. El desarrollador corrigió los 3 contrastes que faltaban. Los medí yo mismo en las pantallas reales de la app, con datos de ejemplo, en Inicio, Gastos, Deudas, Planes, el historial de una deuda, el menú de un gasto fijo, Logros y la vinculación:
+
+| Elemento | Claro | Oscuro | Antes |
+|---|---|---|---|
+| Pastilla verde (`.pill.ok`, 28 elementos) | 5,13:1 | 6,03:1 | 4,39 en claro |
+| Pastilla roja (`.pill.bad`) | 5,17:1 | 4,80:1 | 3,73 en claro |
+| Pastilla ámbar (`.pill.warn`) | 4,91:1 | 6,24:1 | bien |
+| Inicial "A" (`.av.a`, 11 elementos) | 5,96:1 | 4,53:1 | 3,22 en oscuro |
+| Inicial verde "B/C" | 5,16:1 | 7,94:1 | bien |
+
+Todo queda en 4,5:1 o más. La corrección usa `--ok-ink #0A6E44`, `--bad-ink #B4232F` y `.av.a { background: var(--azul-btn) }`.
+
+Pruebas que repetí sobre `26197b3`:
+
+- `t10.py`: 56/56.
+- `t-vinc2.py`: 25/25.
+- `t-aud3.py` y `t-aud3b.py`: sin XSS y 0 imágenes inyectadas.
+- `t-aud2`: 24/24.
+- Mi prueba con dos celulares (g2): 30/31. El único fallo es el mismo umbral mal puesto en mi prueba.
+- g1: los mismos 3 falsos positivos de antes. La casilla "Discreto" se oculta en los gastos compartidos. El modo vista previa no vuelve a pedir el consentimiento, y g4 confirma que fuera de la vista previa sí lo pide.
+- g4: bien.
+- `node --check`: bien en todos los `.js`.
+- 0 errores de página.
+- Capacitor 7.6.10.
+- No hay secretos ni archivos pesados en el commit.
+
+No hay regresiones. Lo que sigue es el informe de la primera revisión, que sigue valiendo salvo los contrastes, ya resueltos. Los pendientes del dueño siguen igual: publicar `firestore.rules` en Firebase antes de usar la versión nueva, borrar `hogares/prueba…` y, después, hacer push y generar el APK.
+
+---
+
+## Primera revisión (sobre `1dde84f`): NO APROBADO (falta poco)
 
 Las 6 peticiones del dueño funcionan y no hay bloqueantes técnicos ni legales. Lo único que falta es terminar dos arreglos de contraste de la auditoría de diseño (I1 e I5). Son cambios pequeños de CSS. Con ellos, el visto bueno es inmediato.
 
